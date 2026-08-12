@@ -13,16 +13,16 @@
                 extend: {
                     fontFamily: { sans: ['Manrope', 'sans-serif'] },
                     colors: {
-                        bg: '#0d0f15',
-                        card: '#151821',
-                        panel: '#1c2030',
-                        accent: '#e5993e',
-                        'accent-dim': 'rgba(229,153,62,0.12)',
-                        fg: '#e4e6ec',
-                        muted: '#5a6175',
-                        border: '#252a3a',
-                        danger: '#e54e4e',
-                        success: '#4ade80',
+                        bg: '#f0f1f5',
+                        card: '#ffffff',
+                        panel: '#f7f8fa',
+                        accent: '#c2740e',
+                        'accent-dim': 'rgba(194,116,14,0.08)',
+                        fg: '#1c1f26',
+                        muted: '#9298a5',
+                        border: '#e3e5ea',
+                        danger: '#dc2626',
+                        success: '#16a34a',
                     }
                 }
             }
@@ -30,10 +30,14 @@
     </script>
     <style>
         :root {
-            --bg: #0d0f15; --card: #151821; --panel: #1c2030;
-            --accent: #e5993e; --accent-glow: rgba(229,153,62,0.12);
-            --fg: #e4e6ec; --muted: #5a6175; --border: #252a3a;
-            --danger: #e54e4e; --success: #4ade80;
+            --bg: #f0f1f5; --card: #ffffff; --panel: #f7f8fa;
+            --accent: #c2740e; --accent-glow: rgba(194,116,14,0.07);
+            --fg: #1c1f26; --muted: #9298a5; --border: #e3e5ea;
+            --danger: #dc2626; --success: #16a34a;
+            --morning: #d4880a; --morning-bg: rgba(212,136,10,0.07);
+            --morning-border: rgba(212,136,10,0.22);
+            --evening: #5472a8; --evening-bg: rgba(84,114,168,0.06);
+            --evening-border: rgba(84,114,168,0.2);
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
@@ -44,99 +48,113 @@
         }
         body::before, body::after {
             content: ''; position: fixed; border-radius: 50%;
-            pointer-events: none; z-index: 0; filter: blur(80px);
+            pointer-events: none; z-index: 0; filter: blur(90px);
         }
         body::before {
-            top: -20%; right: -15%; width: 60vw; height: 60vw;
-            background: radial-gradient(circle, rgba(229,153,62,0.07) 0%, transparent 70%);
+            top: -25%; right: -20%; width: 70vw; height: 70vw;
+            background: radial-gradient(circle, rgba(194,116,14,0.045) 0%, transparent 70%);
         }
         body::after {
-            bottom: -15%; left: -10%; width: 50vw; height: 50vw;
-            background: radial-gradient(circle, rgba(229,153,62,0.04) 0%, transparent 70%);
+            bottom: -20%; left: -15%; width: 55vw; height: 55vw;
+            background: radial-gradient(circle, rgba(84,114,168,0.035) 0%, transparent 70%);
         }
         #app { position: relative; z-index: 1; }
 
+        /* Кнопка редактирования в шапке */
+        .edit-header-btn {
+            width: 40px; height: 40px; border-radius: 10px;
+            border: 1px solid var(--border); background: var(--card);
+            color: var(--muted); display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s; font-size: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04); flex-shrink: 0;
+        }
+        .edit-header-btn:active { transform: scale(0.92); }
+        .edit-header-btn.is-active {
+            border-color: var(--accent); color: var(--accent); background: var(--accent-glow);
+        }
+
         .month-nav-btn {
-            width: 40px; height: 40px; border-radius: 12px;
+            width: 38px; height: 38px; border-radius: 10px;
             border: 1px solid var(--border); background: var(--card);
             color: var(--fg); display: flex; align-items: center; justify-content: center;
-            cursor: pointer; transition: all 0.2s; font-size: 14px;
+            cursor: pointer; transition: all 0.2s; font-size: 13px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         }
         .month-nav-btn:active { transform: scale(0.92); background: var(--panel); }
 
-        .day-card {
-            background: var(--card); border-radius: 16px;
-            border: 1px solid var(--border); overflow: hidden;
-            transition: border-color 0.3s, box-shadow 0.3s;
+        .grid-header {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 16px 8px;
+            position: sticky; top: 0;
+            background: var(--bg); z-index: 10;
         }
-        .day-card.is-today {
-            border-color: var(--accent);
-            box-shadow: 0 0 24px rgba(229,153,62,0.1);
+        .gh-day { width: 54px; flex-shrink: 0; }
+        .gh-label {
+            flex: 1; text-align: center; font-size: 10px;
+            font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase;
         }
-        .day-card.is-past:not(.is-today) { opacity: 0.55; }
-        .day-header {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 12px 16px 8px;
+        .gh-label.morning-label { color: var(--morning); }
+        .gh-label.evening-label { color: var(--evening); margin-left: 10px; padding-left: 10px; border-left: 1.5px solid var(--border); }
+        .gh-label i { margin-right: 3px; font-size: 9px; }
+
+        .day-row {
+            display: flex; align-items: center; gap: 6px;
+            background: var(--card); border-radius: 10px;
+            padding: 8px 10px; margin-bottom: 5px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            transition: opacity 0.2s, border-color 0.2s, box-shadow 0.2s;
+            border-left: 3px solid transparent;
         }
-        .day-name { font-weight: 700; font-size: 15px; color: var(--fg); min-width: 32px; }
-        .day-date-num { font-size: 13px; color: var(--muted); margin-left: 6px; }
-        .today-badge {
-            font-size: 11px; font-weight: 600; color: var(--accent);
-            display: flex; align-items: center; gap: 5px;
-            text-transform: uppercase; letter-spacing: 0.5px;
+        .day-row.is-today {
+            border-left-color: var(--accent);
+            box-shadow: 0 1px 6px rgba(194,116,14,0.1);
+            background: linear-gradient(to right, rgba(194,116,14,0.03), var(--card) 40%);
         }
-        .today-dot {
-            width: 6px; height: 6px; border-radius: 50%;
-            background: var(--accent);
+        .day-row.is-past:not(.is-today) { opacity: 0.45; }
+
+        .dr-info { width: 54px; flex-shrink: 0; text-align: center; }
+        .dr-name { font-size: 13px; font-weight: 800; color: var(--fg); line-height: 1.2; }
+        .dr-date { font-size: 10px; color: var(--muted); font-weight: 500; line-height: 1.2; margin-top: 1px; }
+        .dr-today-dot {
+            width: 5px; height: 5px; border-radius: 50%;
+            background: var(--accent); margin: 3px auto 0;
             animation: pulse-dot 2s ease-in-out infinite;
         }
         @keyframes pulse-dot {
             0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(1.6); }
+            50% { opacity: 0.3; transform: scale(1.5); }
         }
 
-        .shift-block {
-            padding: 8px 16px 12px;
-            border-top: 1px solid rgba(37,42,58,0.5);
+        .slot-group { display: flex; gap: 4px; flex: 1; min-width: 0; }
+        .slot-group.evening-group {
+            margin-left: 10px; padding-left: 10px;
+            border-left: 1.5px solid var(--border);
         }
-        .shift-block:first-of-type { border-top: none; }
-        .shift-info {
-            display: flex; align-items: center; gap: 8px;
-            margin-bottom: 8px; font-size: 12px; font-weight: 500; color: var(--muted);
-        }
-        .shift-icon { font-size: 11px; }
-        .shift-icon.morning { color: #e5993e; }
-        .shift-icon.evening { color: #8b9cc7; }
 
-        .slots-row { display: flex; gap: 8px; }
         .slot {
-            flex: 1; min-height: 40px; border-radius: 10px;
-            font-size: 13px; font-weight: 500;
+            flex: 1; min-width: 0; min-height: 44px;
+            border-radius: 8px; font-size: 11px; font-weight: 600;
             display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s; text-align: center;
-            padding: 6px 8px; line-height: 1.2; word-break: break-word;
+            text-align: center; padding: 4px 5px;
+            line-height: 1.25; word-break: break-word;
+            overflow: hidden;
+            -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            transition: all 0.15s;
         }
-        .slot.view { border: 1px solid transparent; cursor: default; }
-        .slot.view.filled {
-            background: var(--accent-glow); color: var(--fg);
-            border-color: rgba(229,153,62,0.15);
-        }
-        .slot.view.empty { color: var(--muted); opacity: 0.5; font-size: 14px; }
-        .slot.edit {
-            border: 1.5px dashed var(--border); background: transparent;
-            color: var(--muted); cursor: pointer;
-        }
-        .slot.edit:active { transform: scale(0.96); }
-        .slot.edit.filled {
-            border-style: solid; border-color: rgba(229,153,62,0.25);
-            background: var(--accent-glow); color: var(--fg);
-        }
-        .slot.edit.empty { border-color: var(--border); }
-        .slot.edit.empty i { font-size: 11px; }
+        .slot.view { cursor: default; border: 1px solid transparent; }
+        .slot.view.morning.filled { background: var(--morning-bg); color: var(--fg); border-color: var(--morning-border); }
+        .slot.view.evening.filled { background: var(--evening-bg); color: var(--fg); border-color: var(--evening-border); }
+        .slot.view.empty { color: var(--muted); opacity: 0.35; font-size: 13px; }
+        .slot.edit { cursor: pointer; border: 1.5px dashed var(--border); background: transparent; color: var(--muted); }
+        .slot.edit:active { transform: scale(0.95); }
+        .slot.edit.morning.filled { border-style: solid; border-color: var(--morning-border); background: var(--morning-bg); color: var(--fg); }
+        .slot.edit.evening.filled { border-style: solid; border-color: var(--evening-border); background: var(--evening-bg); color: var(--fg); }
+        .slot.edit.empty i { font-size: 10px; }
 
+        /* Bottom Sheet */
         .sheet-overlay {
             position: fixed; inset: 0;
-            background: rgba(0,0,0,0.6);
+            background: rgba(0,0,0,0.25);
             backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
             opacity: 0; transition: opacity 0.3s;
             z-index: 100; pointer-events: none;
@@ -149,64 +167,60 @@
             transform: translateY(100%);
             transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
             z-index: 101; max-height: 75vh; overflow-y: auto;
+            box-shadow: 0 -4px 30px rgba(0,0,0,0.08);
         }
-        .sheet-handle {
-            width: 36px; height: 4px; border-radius: 2px;
-            background: var(--border); margin: 0 auto 16px;
-        }
+        .sheet-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--border); margin: 0 auto 16px; }
         .bottom-sheet.active .sheet-overlay { opacity: 1; pointer-events: auto; }
         .bottom-sheet.active .sheet-panel { transform: translateY(0); }
 
         .picker-item {
-            width: 100%; padding: 14px 16px; border-radius: 12px;
+            width: 100%; padding: 13px 14px; border-radius: 10px;
             border: 1px solid var(--border); background: var(--panel);
             color: var(--fg); font-size: 14px; font-weight: 500;
             text-align: left; cursor: pointer; transition: all 0.15s;
-            font-family: inherit; display: block; margin-bottom: 8px;
+            font-family: inherit; display: block; margin-bottom: 6px;
         }
         .picker-item:active { transform: scale(0.98); }
-        .picker-item.is-selected {
-            border-color: var(--accent); background: var(--accent-glow); color: var(--accent);
-        }
+        .picker-item.is-selected { border-color: var(--accent); background: var(--accent-glow); color: var(--accent); font-weight: 600; }
 
         .emp-item {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 12px 16px; border-radius: 12px;
-            border: 1px solid var(--border); background: var(--panel); margin-bottom: 8px;
+            padding: 12px 14px; border-radius: 10px;
+            border: 1px solid var(--border); background: var(--panel); margin-bottom: 6px;
         }
         .emp-item span { font-size: 14px; font-weight: 500; }
         .emp-del {
             width: 34px; height: 34px; border-radius: 8px; border: none;
-            background: rgba(229,78,78,0.1); color: var(--danger);
+            background: rgba(220,38,38,0.06); color: var(--danger);
             cursor: pointer; display: flex; align-items: center; justify-content: center;
-            font-size: 13px; transition: all 0.15s; flex-shrink: 0;
+            font-size: 12px; transition: all 0.15s; flex-shrink: 0;
         }
-        .emp-del:active { transform: scale(0.9); background: rgba(229,78,78,0.25); }
+        .emp-del:active { transform: scale(0.9); background: rgba(220,38,38,0.15); }
 
         .btn-primary {
-            width: 100%; padding: 14px; border-radius: 12px; border: none;
-            background: var(--accent); color: #0d0f15;
+            width: 100%; padding: 14px; border-radius: 10px; border: none;
+            background: var(--accent); color: #fff;
             font-size: 14px; font-weight: 700; cursor: pointer;
             transition: all 0.15s; font-family: inherit;
         }
         .btn-primary:active { transform: scale(0.97); opacity: 0.85; }
         .btn-secondary {
-            width: 100%; padding: 14px; border-radius: 12px;
-            border: 1px solid var(--border); background: transparent;
+            width: 100%; padding: 14px; border-radius: 10px;
+            border: 1px solid var(--border); background: var(--card);
             color: var(--fg); font-size: 14px; font-weight: 600;
             cursor: pointer; transition: all 0.15s; font-family: inherit;
         }
         .btn-secondary:active { transform: scale(0.97); background: var(--panel); }
         .btn-danger-outline {
-            width: 100%; padding: 12px; border-radius: 12px;
-            border: 1px solid rgba(229,78,78,0.3); background: rgba(229,78,78,0.06);
+            width: 100%; padding: 12px; border-radius: 10px;
+            border: 1px solid rgba(220,38,38,0.2); background: rgba(220,38,38,0.04);
             color: var(--danger); font-size: 13px; font-weight: 600;
             cursor: pointer; transition: all 0.15s; font-family: inherit;
         }
-        .btn-danger-outline:active { transform: scale(0.97); background: rgba(229,78,78,0.15); }
+        .btn-danger-outline:active { transform: scale(0.97); background: rgba(220,38,38,0.1); }
 
         .input-field {
-            width: 100%; padding: 14px 16px; border-radius: 12px;
+            width: 100%; padding: 14px 14px; border-radius: 10px;
             border: 1.5px solid var(--border); background: var(--panel);
             color: var(--fg); font-size: 14px; font-family: inherit;
             outline: none; transition: border-color 0.2s;
@@ -214,27 +228,31 @@
         .input-field::placeholder { color: var(--muted); }
         .input-field:focus { border-color: var(--accent); }
 
+        /* Футер — только для кнопки сотрудников */
         .footer-bar {
             position: fixed; bottom: 0; left: 0; right: 0;
-            background: rgba(21,24,33,0.88);
+            background: rgba(255,255,255,0.92);
             backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
             border-top: 1px solid var(--border);
             padding: 10px 16px;
             padding-bottom: max(10px, env(safe-area-inset-bottom));
-            z-index: 50; display: flex; gap: 10px;
+            z-index: 50;
+            display: flex; justify-content: center;
+            transition: transform 0.3s, opacity 0.3s;
         }
-        .footer-btn {
-            flex: 1; padding: 12px 8px; border-radius: 12px;
+        .footer-bar.hidden-bar {
+            transform: translateY(100%); opacity: 0; pointer-events: none;
+        }
+        .footer-btn-single {
+            padding: 11px 32px; border-radius: 10px;
             border: 1px solid var(--border); background: var(--card);
-            color: var(--muted); font-size: 12px; font-weight: 600;
+            color: var(--fg); font-size: 13px; font-weight: 600;
             cursor: pointer; transition: all 0.2s; font-family: inherit;
-            display: flex; flex-direction: column; align-items: center; gap: 5px;
+            display: flex; align-items: center; gap: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
         }
-        .footer-btn i { font-size: 16px; }
-        .footer-btn:active { transform: scale(0.95); }
-        .footer-btn.is-active {
-            border-color: var(--accent); color: var(--accent); background: var(--accent-glow);
-        }
+        .footer-btn-single i { font-size: 14px; color: var(--accent); }
+        .footer-btn-single:active { transform: scale(0.95); }
 
         .toast-container {
             position: fixed; top: 16px; left: 16px; right: 16px;
@@ -242,15 +260,16 @@
             gap: 8px; pointer-events: none;
         }
         .toast {
-            padding: 12px 16px; border-radius: 12px;
+            padding: 12px 16px; border-radius: 10px;
             font-size: 13px; font-weight: 600; text-align: center;
             opacity: 0; transform: translateY(-10px);
             transition: all 0.3s; pointer-events: auto;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
         }
         .toast.show { opacity: 1; transform: translateY(0); }
-        .toast.success { background: rgba(74,222,128,0.15); color: var(--success); border: 1px solid rgba(74,222,128,0.2); }
-        .toast.error { background: rgba(229,78,78,0.15); color: var(--danger); border: 1px solid rgba(229,78,78,0.2); }
-        .toast.info { background: rgba(229,153,62,0.15); color: var(--accent); border: 1px solid rgba(229,153,62,0.2); }
+        .toast.success { background: #f0fdf4; color: var(--success); border: 1px solid #bbf7d0; }
+        .toast.error { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
+        .toast.info { background: #fffbeb; color: var(--accent); border: 1px solid #fde68a; }
 
         .empty-state { text-align: center; padding: 24px 16px; color: var(--muted); font-size: 13px; }
 
@@ -265,16 +284,15 @@
             80% { transform: translateX(5px); }
         }
         .shake { animation: shake 0.4s ease; }
-
         .divider { height: 1px; background: var(--border); margin: 16px 0; }
 
         .scroll-top-btn {
-            position: fixed; bottom: 80px; right: 16px;
-            width: 44px; height: 44px; border-radius: 50%;
-            background: var(--accent); color: #0d0f15;
-            border: none; cursor: pointer; z-index: 45;
+            position: fixed; bottom: 78px; right: 14px;
+            width: 42px; height: 42px; border-radius: 50%;
+            background: var(--card); color: var(--fg);
+            border: 1px solid var(--border); cursor: pointer; z-index: 45;
             display: flex; align-items: center; justify-content: center;
-            font-size: 16px; box-shadow: 0 4px 20px rgba(229,153,62,0.3);
+            font-size: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.08);
             opacity: 0; transform: translateY(10px);
             transition: all 0.3s; pointer-events: none;
         }
@@ -287,7 +305,7 @@
                 transition-duration: 0.05ms !important;
             }
         }
-        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar { width: 3px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
     </style>
@@ -295,18 +313,23 @@
 <body>
 
 <div id="app">
-    <header class="px-4 pt-5 pb-3">
-        <h1 class="text-xl font-extrabold tracking-tight text-fg">График работы</h1>
-        <p id="modeLabel" class="text-xs font-medium text-muted mt-1">Режим просмотра</p>
+    <header class="flex items-center justify-between px-4 pt-5 pb-2">
+        <div>
+            <h1 class="text-lg font-extrabold tracking-tight text-fg">График работы</h1>
+            <p id="modeLabel" class="text-[11px] font-semibold text-muted mt-0.5">Режим просмотра</p>
+        </div>
+        <button class="edit-header-btn" id="editBtn" aria-label="Режим редактирования" title="Редактирование">
+            <i class="fas fa-lock"></i>
+        </button>
     </header>
 
-    <nav class="flex items-center justify-between px-4 mb-4">
+    <nav class="flex items-center justify-between px-4 mb-3">
         <button class="month-nav-btn" id="prevMonth" aria-label="Предыдущий месяц">
             <i class="fas fa-chevron-left"></i>
         </button>
         <div class="text-center">
-            <span id="monthLabel" class="text-sm font-semibold text-fg"></span>
-            <button id="todayBtn" class="block mx-auto mt-1 text-xs font-semibold text-accent bg-accent-dim px-3 py-1 rounded-full border border-transparent hover:border-accent transition-all">
+            <span id="monthLabel" class="text-sm font-bold text-fg"></span>
+            <button id="todayBtn" class="block mx-auto mt-1 text-[11px] font-bold text-accent bg-accent-dim px-3 py-1 rounded-full border border-transparent hover:border-accent/30 transition-all">
                 Текущий месяц
             </button>
         </div>
@@ -315,24 +338,22 @@
         </button>
     </nav>
 
-    <main id="scheduleGrid" class="flex flex-col gap-3 px-4 pb-28"></main>
+    <main id="scheduleGrid" class="pb-16"></main>
 </div>
 
 <button class="scroll-top-btn" id="scrollTopBtn" aria-label="Наверх">
     <i class="fas fa-arrow-up"></i>
 </button>
 
-<footer class="footer-bar">
-    <button class="footer-btn" id="employeesBtn" aria-label="Управление сотрудниками">
+<!-- Футер — только кнопка сотрудников, видна только в режиме редактирования -->
+<footer class="footer-bar hidden-bar" id="footerBar">
+    <button class="footer-btn-single" id="employeesBtn" aria-label="Управление сотрудниками">
         <i class="fas fa-users"></i>
         <span>Сотрудники</span>
     </button>
-    <button class="footer-btn" id="editBtn" aria-label="Режим редактирования">
-        <i class="fas fa-lock"></i>
-        <span>Редактирование</span>
-    </button>
 </footer>
 
+<!-- Пикер сотрудника -->
 <div class="bottom-sheet" id="pickerSheet">
     <div class="sheet-overlay" data-close="pickerSheet"></div>
     <div class="sheet-panel">
@@ -350,6 +371,7 @@
     </div>
 </div>
 
+<!-- Управление сотрудниками -->
 <div class="bottom-sheet" id="employeesSheet">
     <div class="sheet-overlay" data-close="employeesSheet"></div>
     <div class="sheet-panel">
@@ -357,25 +379,24 @@
         <h3 class="text-base font-bold text-fg mb-4">Список сотрудников</h3>
         <div class="flex gap-2 mb-4">
             <input type="text" class="input-field" id="newEmpInput" placeholder="Фамилия И.О." maxlength="40">
-            <button class="btn-primary" style="width:auto; padding:14px 18px; flex-shrink:0;" id="addEmpBtn">
+            <button class="btn-primary" style="width:auto; padding:14px 16px; flex-shrink:0;" id="addEmpBtn">
                 <i class="fas fa-plus"></i>
             </button>
         </div>
         <div id="employeesList"></div>
-        <div id="pwSection" style="display:none;">
-            <div class="divider"></div>
-            <p class="text-xs font-semibold text-muted mb-3 uppercase tracking-wider">Смена пароля</p>
-            <input type="password" class="input-field mb-2" id="newPwInput" placeholder="Новый пароль" maxlength="30">
-            <button class="btn-secondary" id="changePwBtn" style="font-size:13px; padding:12px;">
-                <i class="fas fa-key"></i> Сохранить пароль
-            </button>
-        </div>
+        <div class="divider"></div>
+        <p class="text-[11px] font-bold text-muted mb-3 uppercase tracking-wider">Смена пароля</p>
+        <input type="password" class="input-field mb-2" id="newPwInput" placeholder="Новый пароль" maxlength="30">
+        <button class="btn-secondary" id="changePwBtn" style="font-size:13px; padding:12px;">
+            <i class="fas fa-key"></i> Сохранить пароль
+        </button>
         <div class="mt-4">
             <button class="btn-secondary" data-close="employeesSheet">Закрыть</button>
         </div>
     </div>
 </div>
 
+<!-- Ввод пароля -->
 <div class="bottom-sheet" id="passwordSheet">
     <div class="sheet-overlay" data-close="passwordSheet"></div>
     <div class="sheet-panel">
@@ -394,34 +415,33 @@
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-    const DEFAULT_PASSWORD = '1234';
-    const LS_EMPLOYEES = 'sched_emp';
-    const LS_SCHEDULE   = 'sched_data';
-    const LS_PASSWORD   = 'sched_pw';
-    const SS_EDIT       = 'sched_edit';
+    var DEFAULT_PASSWORD = '1234';
+    var LS_EMPLOYEES = 'sched_emp';
+    var LS_SCHEDULE   = 'sched_data';
+    var LS_PASSWORD   = 'sched_pw';
+    var SS_EDIT       = 'sched_edit';
 
-    const MONTHS_FULL = [
+    var MONTHS_FULL = [
         'Январь','Февраль','Март','Апрель','Май','Июнь',
         'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'
     ];
-    const MONTHS_GEN = [
-        'января','февраля','марта','апреля','мая','июня',
-        'июля','августа','сентября','октября','ноября','декабря'
+    var MONTHS_GEN = [
+        'янв','фев','мар','апр','мая','июн',
+        'июл','авг','сен','окт','ноя','дек'
     ];
-    const DAY_NAMES = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+    var DAY_NAMES = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 
-    let employees  = [];
-    let schedule   = {};
-    let isEditMode = false;
-    let viewYear, viewMonth;
-    let activeSheet  = null;
-    let selectedSlot = null;
+    var employees  = [];
+    var schedule   = {};
+    var isEditMode = false;
+    var viewYear, viewMonth;
+    var activeSheet  = null;
+    var selectedSlot = null;
 
     function fmtDate(d) {
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${dd}`;
+        return d.getFullYear() + '-' +
+            String(d.getMonth() + 1).padStart(2, '0') + '-' +
+            String(d.getDate()).padStart(2, '0');
     }
 
     function getDaysInMonth(year, month) {
@@ -429,7 +449,7 @@
     }
 
     function getWeekday(d) {
-        const day = d.getDay();
+        var day = d.getDay();
         return day === 0 ? 6 : day - 1;
     }
 
@@ -437,9 +457,9 @@
         try {
             employees = JSON.parse(localStorage.getItem(LS_EMPLOYEES)) || [];
             schedule  = JSON.parse(localStorage.getItem(LS_SCHEDULE)) || {};
-        } catch { employees = []; schedule = {}; }
+        } catch (e) { employees = []; schedule = {}; }
         isEditMode = sessionStorage.getItem(SS_EDIT) === '1';
-        const now = new Date();
+        var now = new Date();
         viewYear = now.getFullYear();
         viewMonth = now.getMonth();
     }
@@ -451,63 +471,57 @@
     function render() {
         renderMonthNav();
         renderSchedule();
+        renderHeader();
         renderFooter();
     }
 
     function renderMonthNav() {
-        document.getElementById('monthLabel').textContent = `${MONTHS_FULL[viewMonth]} ${viewYear}`;
+        document.getElementById('monthLabel').textContent = MONTHS_FULL[viewMonth] + ' ' + viewYear;
     }
 
     function renderSchedule() {
-        const grid = document.getElementById('scheduleGrid');
-        const daysCount = getDaysInMonth(viewYear, viewMonth);
-        const todayStr = fmtDate(new Date());
-        let html = '';
+        var grid = document.getElementById('scheduleGrid');
+        var daysCount = getDaysInMonth(viewYear, viewMonth);
+        var todayStr = fmtDate(new Date());
+        var todayDate = new Date(); todayDate.setHours(0,0,0,0);
+        var html = '';
 
-        for (let day = 1; day <= daysCount; day++) {
-            const d = new Date(viewYear, viewMonth, day);
-            const dk = fmtDate(d);
-            const isToday = dk === todayStr;
-            const todayDate = new Date(); todayDate.setHours(0,0,0,0);
+        html += '<div class="grid-header">';
+        html += '<div class="gh-day"></div>';
+        html += '<div class="gh-label morning-label"><i class="fas fa-sun"></i> 8:00\u201315:30</div>';
+        html += '<div class="gh-label evening-label"><i class="fas fa-moon"></i> 15:30\u201323:00</div>';
+        html += '</div>';
+
+        for (var day = 1; day <= daysCount; day++) {
+            var d = new Date(viewYear, viewMonth, day);
+            var dk = fmtDate(d);
+            var isToday = dk === todayStr;
             d.setHours(0,0,0,0);
-            const isPast = d < todayDate;
-            const weekday = getWeekday(d);
-            const ds = schedule[dk] || { morning: ['', ''], evening: ['', ''] };
+            var isPast = d < todayDate;
+            var weekday = getWeekday(d);
+            var ds = schedule[dk] || { morning: ['', ''], evening: ['', ''] };
 
-            let cardCls = 'day-card';
+            var cardCls = 'day-row';
             if (isToday) cardCls += ' is-today';
             else if (isPast) cardCls += ' is-past';
 
             html += '<div class="' + cardCls + '">';
-            html += '<div class="day-header">';
-            html += '<div class="flex items-center">';
-            html += '<span class="day-name">' + DAY_NAMES[weekday] + '</span>';
-            html += '<span class="day-date-num">' + day + ' ' + MONTHS_GEN[viewMonth] + '</span>';
-            html += '</div>';
-            if (isToday) {
-                html += '<span class="today-badge"><span class="today-dot"></span>Сегодня</span>';
-            }
+            html += '<div class="dr-info">';
+            html += '<div class="dr-name">' + DAY_NAMES[weekday] + '</div>';
+            html += '<div class="dr-date">' + day + ' ' + MONTHS_GEN[viewMonth] + '</div>';
+            if (isToday) html += '<div class="dr-today-dot"></div>';
+            else html += '<div style="height:5px"></div>';
             html += '</div>';
 
-            html += '<div class="shift-block">';
-            html += '<div class="shift-info">';
-            html += '<i class="fas fa-sun shift-icon morning"></i>';
-            html += '<span>8:00 \u2013 15:30</span>';
-            html += '</div>';
-            html += '<div class="slots-row">';
+            html += '<div class="slot-group">';
             html += slotHTML(dk, 'morning', 0, ds.morning[0]);
             html += slotHTML(dk, 'morning', 1, ds.morning[1]);
-            html += '</div></div>';
-
-            html += '<div class="shift-block">';
-            html += '<div class="shift-info">';
-            html += '<i class="fas fa-moon shift-icon evening"></i>';
-            html += '<span>15:30 \u2013 23:00</span>';
             html += '</div>';
-            html += '<div class="slots-row">';
+
+            html += '<div class="slot-group evening-group">';
             html += slotHTML(dk, 'evening', 0, ds.evening[0]);
             html += slotHTML(dk, 'evening', 1, ds.evening[1]);
-            html += '</div></div>';
+            html += '</div>';
 
             html += '</div>';
         }
@@ -516,30 +530,43 @@
     }
 
     function slotHTML(dateKey, shift, idx, value) {
-        const cls = value ? 'filled' : 'empty';
+        var cls = value ? 'filled' : 'empty';
+        var mode = isEditMode ? 'edit' : 'view';
         if (isEditMode) {
-            return '<button class="slot edit ' + cls + '" onclick="openPicker(\'' + dateKey + '\',\'' + shift + '\',' + idx + ')">' +
+            return '<button class="slot ' + mode + ' ' + shift + ' ' + cls + '" onclick="openPicker(\'' + dateKey + '\',\'' + shift + '\',' + idx + ')">' +
                    (value || '<i class="fas fa-plus"></i>') + '</button>';
         }
-        return '<div class="slot view ' + cls + '">' + (value || '\u2014') + '</div>';
+        return '<div class="slot ' + mode + ' ' + shift + ' ' + cls + '">' + (value || '\u2014') + '</div>';
     }
 
-    function renderFooter() {
-        const btn = document.getElementById('editBtn');
-        const label = document.getElementById('modeLabel');
+    function renderHeader() {
+        var btn = document.getElementById('editBtn');
+        var label = document.getElementById('modeLabel');
         if (isEditMode) {
             btn.classList.add('is-active');
-            btn.innerHTML = '<i class="fas fa-lock-open"></i><span>Просмотр</span>';
+            btn.innerHTML = '<i class="fas fa-lock-open"></i>';
+            btn.title = 'Выйти из редактирования';
             label.textContent = 'Режим редактирования';
             label.style.color = 'var(--accent)';
         } else {
             btn.classList.remove('is-active');
-            btn.innerHTML = '<i class="fas fa-lock"></i><span>Редактирование</span>';
+            btn.innerHTML = '<i class="fas fa-lock"></i>';
+            btn.title = 'Редактирование';
             label.textContent = 'Режим просмотра';
             label.style.color = '';
         }
     }
 
+    function renderFooter() {
+        var bar = document.getElementById('footerBar');
+        if (isEditMode) {
+            bar.classList.remove('hidden-bar');
+        } else {
+            bar.classList.add('hidden-bar');
+        }
+    }
+
+    /* Пикер сотрудника */
     function openPicker(dateKey, shift, index) {
         selectedSlot = { dateKey: dateKey, shift: shift, index: index };
         var curName = '';
@@ -565,9 +592,7 @@
 
     function pickEmployee(empIdx) {
         if (!selectedSlot) return;
-        var dk = selectedSlot.dateKey;
-        var sh = selectedSlot.shift;
-        var idx = selectedSlot.index;
+        var dk = selectedSlot.dateKey, sh = selectedSlot.shift, idx = selectedSlot.index;
         if (!schedule[dk]) schedule[dk] = { morning: ['', ''], evening: ['', ''] };
         schedule[dk][sh][idx] = employees[empIdx];
         saveSchedule();
@@ -577,9 +602,7 @@
 
     function clearSlot() {
         if (!selectedSlot) return;
-        var dk = selectedSlot.dateKey;
-        var sh = selectedSlot.shift;
-        var idx = selectedSlot.index;
+        var dk = selectedSlot.dateKey, sh = selectedSlot.shift, idx = selectedSlot.index;
         if (schedule[dk] && schedule[dk][sh]) {
             schedule[dk][sh][idx] = '';
             saveSchedule();
@@ -588,10 +611,10 @@
         renderSchedule();
     }
 
+    /* Управление сотрудниками */
     function openEmployeesSheet() {
         renderEmployeesList();
         document.getElementById('newEmpInput').value = '';
-        document.getElementById('pwSection').style.display = isEditMode ? 'block' : 'none';
         document.getElementById('newPwInput').value = '';
         showSheet('employeesSheet');
         setTimeout(function() { document.getElementById('newEmpInput').focus(); }, 350);
@@ -652,6 +675,7 @@
         showToast(name + ' удалён', 'success');
     }
 
+    /* Режим редактирования и пароль */
     function toggleEditMode() {
         if (isEditMode) {
             isEditMode = false;
@@ -694,6 +718,7 @@
         showToast('Пароль изменён', 'success');
     }
 
+    /* Навигация по месяцам */
     function switchMonth(dir) {
         if (activeSheet) return;
         var grid = document.getElementById('scheduleGrid');
@@ -713,7 +738,7 @@
         if (activeSheet) return;
         var now = new Date();
         if (viewYear === now.getFullYear() && viewMonth === now.getMonth()) {
-            var el = document.querySelector('.day-card.is-today');
+            var el = document.querySelector('.day-row.is-today');
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }
@@ -726,7 +751,7 @@
             renderSchedule();
             grid.classList.remove('switching');
             setTimeout(function() {
-                var el = document.querySelector('.day-card.is-today');
+                var el = document.querySelector('.day-row.is-today');
                 if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 200);
         }, 180);
@@ -734,13 +759,11 @@
 
     function updateScrollTopBtn() {
         var btn = document.getElementById('scrollTopBtn');
-        if (window.scrollY > 400) {
-            btn.classList.add('visible');
-        } else {
-            btn.classList.remove('visible');
-        }
+        if (window.scrollY > 400) btn.classList.add('visible');
+        else btn.classList.remove('visible');
     }
 
+    /* Bottom Sheet */
     function showSheet(id) {
         activeSheet = id;
         document.getElementById(id).classList.add('active');
@@ -753,6 +776,7 @@
         document.body.style.overflow = '';
     }
 
+    /* Toast */
     function showToast(msg, type) {
         type = type || 'info';
         var container = document.getElementById('toastContainer');
@@ -773,24 +797,31 @@
         return div.innerHTML;
     }
 
+    /* Свайпы */
     var touchStartX = 0, touchStartY = 0;
     document.addEventListener('touchstart', function(e) {
         touchStartX = e.changedTouches[0].screenX;
         touchStartY = e.changedTouches[0].screenY;
     }, { passive: true });
-
     document.addEventListener('touchend', function(e) {
         if (activeSheet) return;
         var dx = touchStartX - e.changedTouches[0].screenX;
         var dy = touchStartY - e.changedTouches[0].screenY;
-        if (Math.abs(dx) > 80 && Math.abs(dy) < 60) {
-            switchMonth(dx > 0 ? 1 : -1);
-        }
+        if (Math.abs(dx) > 80 && Math.abs(dy) < 60) switchMonth(dx > 0 ? 1 : -1);
     }, { passive: true });
 
+    /* Инициализация */
     document.addEventListener('DOMContentLoaded', function() {
         loadData();
         render();
+
+        // Прокрутка к сегодняшнему дню при загрузке
+        setTimeout(function() {
+            var todayEl = document.querySelector('.day-row.is-today');
+            if (todayEl) {
+                todayEl.scrollIntoView({ behavior: 'instant', block: 'center' });
+            }
+        }, 50);
 
         document.getElementById('prevMonth').addEventListener('click', function() { switchMonth(-1); });
         document.getElementById('nextMonth').addEventListener('click', function() { switchMonth(1); });
@@ -799,33 +830,18 @@
         document.getElementById('editBtn').addEventListener('click', toggleEditMode);
         document.getElementById('clearSlotBtn').addEventListener('click', clearSlot);
         document.getElementById('addEmpBtn').addEventListener('click', addEmployee);
-        document.getElementById('newEmpInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') addEmployee();
-        });
+        document.getElementById('newEmpInput').addEventListener('keypress', function(e) { if (e.key === 'Enter') addEmployee(); });
         document.getElementById('submitPwBtn').addEventListener('click', submitPassword);
-        document.getElementById('pwInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') submitPassword();
-        });
-        document.getElementById('resetPwBtn').addEventListener('click', function() {
-            resetPassword();
-            hideSheet('passwordSheet');
-        });
+        document.getElementById('pwInput').addEventListener('keypress', function(e) { if (e.key === 'Enter') submitPassword(); });
+        document.getElementById('resetPwBtn').addEventListener('click', function() { resetPassword(); hideSheet('passwordSheet'); });
         document.getElementById('changePwBtn').addEventListener('click', changePassword);
 
         var closeBtns = document.querySelectorAll('[data-close]');
         for (var i = 0; i < closeBtns.length; i++) {
-            closeBtns[i].addEventListener('click', function() {
-                hideSheet(this.getAttribute('data-close'));
-            });
+            closeBtns[i].addEventListener('click', function() { hideSheet(this.getAttribute('data-close')); });
         }
-
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && activeSheet) hideSheet(activeSheet);
-        });
-
-        document.getElementById('scrollTopBtn').addEventListener('click', function() {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
+        document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && activeSheet) hideSheet(activeSheet); });
+        document.getElementById('scrollTopBtn').addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }); });
         window.addEventListener('scroll', updateScrollTopBtn, { passive: true });
     });
 </script>
