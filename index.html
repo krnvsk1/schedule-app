@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>График работы</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Manrope', 'sans-serif'] },
+                    colors: {
+                        bg: '#0d0f15',
+                        card: '#151821',
+                        panel: '#1c2030',
+                        accent: '#e5993e',
+                        'accent-dim': 'rgba(229,153,62,0.12)',
+                        fg: '#e4e6ec',
+                        muted: '#5a6175',
+                        border: '#252a3a',
+                        danger: '#e54e4e',
+                        success: '#4ade80',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --bg: #0d0f15; --card: #151821; --panel: #1c2030;
+            --accent: #e5993e; --accent-glow: rgba(229,153,62,0.12);
+            --fg: #e4e6ec; --muted: #5a6175; --border: #252a3a;
+            --danger: #e54e4e; --success: #4ade80;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Manrope', sans-serif;
+            background: var(--bg); color: var(--fg);
+            margin: 0; padding: 0;
+            min-height: 100dvh; overflow-x: hidden;
+        }
+        body::before, body::after {
+            content: ''; position: fixed; border-radius: 50%;
+            pointer-events: none; z-index: 0; filter: blur(80px);
+        }
+        body::before {
+            top: -20%; right: -15%; width: 60vw; height: 60vw;
+            background: radial-gradient(circle, rgba(229,153,62,0.07) 0%, transparent 70%);
+        }
+        body::after {
+            bottom: -15%; left: -10%; width: 50vw; height: 50vw;
+            background: radial-gradient(circle, rgba(229,153,62,0.04) 0%, transparent 70%);
+        }
+        #app { position: relative; z-index: 1; }
+
+        .month-nav-btn {
+            width: 40px; height: 40px; border-radius: 12px;
+            border: 1px solid var(--border); background: var(--card);
+            color: var(--fg); display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s; font-size: 14px;
+        }
+        .month-nav-btn:active { transform: scale(0.92); background: var(--panel); }
+
+        .day-card {
+            background: var(--card); border-radius: 16px;
+            border: 1px solid var(--border); overflow: hidden;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .day-card.is-today {
+            border-color: var(--accent);
+            box-shadow: 0 0 24px rgba(229,153,62,0.1);
+        }
+        .day-card.is-past:not(.is-today) { opacity: 0.55; }
+        .day-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px 8px;
+        }
+        .day-name { font-weight: 700; font-size: 15px; color: var(--fg); min-width: 32px; }
+        .day-date-num { font-size: 13px; color: var(--muted); margin-left: 6px; }
+        .today-badge {
+            font-size: 11px; font-weight: 600; color: var(--accent);
+            display: flex; align-items: center; gap: 5px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .today-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--accent);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.6); }
+        }
+
+        .shift-block {
+            padding: 8px 16px 12px;
+            border-top: 1px solid rgba(37,42,58,0.5);
+        }
+        .shift-block:first-of-type { border-top: none; }
+        .shift-info {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 8px; font-size: 12px; font-weight: 500; color: var(--muted);
+        }
+        .shift-icon { font-size: 11px; }
+        .shift-icon.morning { color: #e5993e; }
+        .shift-icon.evening { color: #8b9cc7; }
+
+        .slots-row { display: flex; gap: 8px; }
+        .slot {
+            flex: 1; min-height: 40px; border-radius: 10px;
+            font-size: 13px; font-weight: 500;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; text-align: center;
+            padding: 6px 8px; line-height: 1.2; word-break: break-word;
+        }
+        .slot.view { border: 1px solid transparent; cursor: default; }
+        .slot.view.filled {
+            background: var(--accent-glow); color: var(--fg);
+            border-color: rgba(229,153,62,0.15);
+        }
+        .slot.view.empty { color: var(--muted); opacity: 0.5; font-size: 14px; }
+        .slot.edit {
+            border: 1.5px dashed var(--border); background: transparent;
+            color: var(--muted); cursor: pointer;
+        }
+        .slot.edit:active { transform: scale(0.96); }
+        .slot.edit.filled {
+            border-style: solid; border-color: rgba(229,153,62,0.25);
+            background: var(--accent-glow); color: var(--fg);
+        }
+        .slot.edit.empty { border-color: var(--border); }
+        .slot.edit.empty i { font-size: 11px; }
+
+        .sheet-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+            opacity: 0; transition: opacity 0.3s;
+            z-index: 100; pointer-events: none;
+        }
+        .sheet-panel {
+            position: fixed; left: 0; right: 0; bottom: 0;
+            background: var(--card); border-top: 1px solid var(--border);
+            border-radius: 20px 20px 0 0;
+            padding: 12px 20px 28px;
+            transform: translateY(100%);
+            transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+            z-index: 101; max-height: 75vh; overflow-y: auto;
+        }
+        .sheet-handle {
+            width: 36px; height: 4px; border-radius: 2px;
+            background: var(--border); margin: 0 auto 16px;
+        }
+        .bottom-sheet.active .sheet-overlay { opacity: 1; pointer-events: auto; }
+        .bottom-sheet.active .sheet-panel { transform: translateY(0); }
+
+        .picker-item {
+            width: 100%; padding: 14px 16px; border-radius: 12px;
+            border: 1px solid var(--border); background: var(--panel);
+            color: var(--fg); font-size: 14px; font-weight: 500;
+            text-align: left; cursor: pointer; transition: all 0.15s;
+            font-family: inherit; display: block; margin-bottom: 8px;
+        }
+        .picker-item:active { transform: scale(0.98); }
+        .picker-item.is-selected {
+            border-color: var(--accent); background: var(--accent-glow); color: var(--accent);
+        }
+
+        .emp-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px; border-radius: 12px;
+            border: 1px solid var(--border); background: var(--panel); margin-bottom: 8px;
+        }
+        .emp-item span { font-size: 14px; font-weight: 500; }
+        .emp-del {
+            width: 34px; height: 34px; border-radius: 8px; border: none;
+            background: rgba(229,78,78,0.1); color: var(--danger);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 13px; transition: all 0.15s; flex-shrink: 0;
+        }
+        .emp-del:active { transform: scale(0.9); background: rgba(229,78,78,0.25); }
+
+        .btn-primary {
+            width: 100%; padding: 14px; border-radius: 12px; border: none;
+            background: var(--accent); color: #0d0f15;
+            font-size: 14px; font-weight: 700; cursor: pointer;
+            transition: all 0.15s; font-family: inherit;
+        }
+        .btn-primary:active { transform: scale(0.97); opacity: 0.85; }
+        .btn-secondary {
+            width: 100%; padding: 14px; border-radius: 12px;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--fg); font-size: 14px; font-weight: 600;
+            cursor: pointer; transition: all 0.15s; font-family: inherit;
+        }
+        .btn-secondary:active { transform: scale(0.97); background: var(--panel); }
+        .btn-danger-outline {
+            width: 100%; padding: 12px; border-radius: 12px;
+            border: 1px solid rgba(229,78,78,0.3); background: rgba(229,78,78,0.06);
+            color: var(--danger); font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: all 0.15s; font-family: inherit;
+        }
+        .btn-danger-outline:active { transform: scale(0.97); background: rgba(229,78,78,0.15); }
+
+        .input-field {
+            width: 100%; padding: 14px 16px; border-radius: 12px;
+            border: 1.5px solid var(--border); background: var(--panel);
+            color: var(--fg); font-size: 14px; font-family: inherit;
+            outline: none; transition: border-color 0.2s;
+        }
+        .input-field::placeholder { color: var(--muted); }
+        .input-field:focus { border-color: var(--accent); }
+
+        .footer-bar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: rgba(21,24,33,0.88);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border-top: 1px solid var(--border);
+            padding: 10px 16px;
+            padding-bottom: max(10px, env(safe-area-inset-bottom));
+            z-index: 50; display: flex; gap: 10px;
+        }
+        .footer-btn {
+            flex: 1; padding: 12px 8px; border-radius: 12px;
+            border: 1px solid var(--border); background: var(--card);
+            color: var(--muted); font-size: 12px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s; font-family: inherit;
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+        }
+        .footer-btn i { font-size: 16px; }
+        .footer-btn:active { transform: scale(0.95); }
+        .footer-btn.is-active {
+            border-color: var(--accent); color: var(--accent); background: var(--accent-glow);
+        }
+
+        .toast-container {
+            position: fixed; top: 16px; left: 16px; right: 16px;
+            z-index: 200; display: flex; flex-direction: column;
+            gap: 8px; pointer-events: none;
+        }
+        .toast {
+            padding: 12px 16px; border-radius: 12px;
+            font-size: 13px; font-weight: 600; text-align: center;
+            opacity: 0; transform: translateY(-10px);
+            transition: all 0.3s; pointer-events: auto;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.success { background: rgba(74,222,128,0.15); color: var(--success); border: 1px solid rgba(74,222,128,0.2); }
+        .toast.error { background: rgba(229,78,78,0.15); color: var(--danger); border: 1px solid rgba(229,78,78,0.2); }
+        .toast.info { background: rgba(229,153,62,0.15); color: var(--accent); border: 1px solid rgba(229,153,62,0.2); }
+
+        .empty-state { text-align: center; padding: 24px 16px; color: var(--muted); font-size: 13px; }
+
+        #scheduleGrid { transition: opacity 0.18s ease, transform 0.18s ease; }
+        #scheduleGrid.switching { opacity: 0; transform: translateY(6px); }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(5px); }
+        }
+        .shake { animation: shake 0.4s ease; }
+
+        .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+        .scroll-top-btn {
+            position: fixed; bottom: 80px; right: 16px;
+            width: 44px; height: 44px; border-radius: 50%;
+            background: var(--accent); color: #0d0f15;
+            border: none; cursor: pointer; z-index: 45;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; box-shadow: 0 4px 20px rgba(229,153,62,0.3);
+            opacity: 0; transform: translateY(10px);
+            transition: all 0.3s; pointer-events: none;
+        }
+        .scroll-top-btn.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+        .scroll-top-btn:active { transform: scale(0.9); }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.05ms !important;
+            }
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <header class="px-4 pt-5 pb-3">
+        <h1 class="text-xl font-extrabold tracking-tight text-fg">График работы</h1>
+        <p id="modeLabel" class="text-xs font-medium text-muted mt-1">Режим просмотра</p>
+    </header>
+
+    <nav class="flex items-center justify-between px-4 mb-4">
+        <button class="month-nav-btn" id="prevMonth" aria-label="Предыдущий месяц">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <div class="text-center">
+            <span id="monthLabel" class="text-sm font-semibold text-fg"></span>
+            <button id="todayBtn" class="block mx-auto mt-1 text-xs font-semibold text-accent bg-accent-dim px-3 py-1 rounded-full border border-transparent hover:border-accent transition-all">
+                Текущий месяц
+            </button>
+        </div>
+        <button class="month-nav-btn" id="nextMonth" aria-label="Следующий месяц">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    </nav>
+
+    <main id="scheduleGrid" class="flex flex-col gap-3 px-4 pb-28"></main>
+</div>
+
+<button class="scroll-top-btn" id="scrollTopBtn" aria-label="Наверх">
+    <i class="fas fa-arrow-up"></i>
+</button>
+
+<footer class="footer-bar">
+    <button class="footer-btn" id="employeesBtn" aria-label="Управление сотрудниками">
+        <i class="fas fa-users"></i>
+        <span>Сотрудники</span>
+    </button>
+    <button class="footer-btn" id="editBtn" aria-label="Режим редактирования">
+        <i class="fas fa-lock"></i>
+        <span>Редактирование</span>
+    </button>
+</footer>
+
+<div class="bottom-sheet" id="pickerSheet">
+    <div class="sheet-overlay" data-close="pickerSheet"></div>
+    <div class="sheet-panel">
+        <div class="sheet-handle"></div>
+        <h3 class="text-base font-bold text-fg mb-4">Выбрать сотрудника</h3>
+        <div id="pickerList"></div>
+        <div class="mt-3">
+            <button class="btn-danger-outline" id="clearSlotBtn" style="display:none;">
+                <i class="fas fa-eraser"></i> Очистить слот
+            </button>
+        </div>
+        <div class="mt-3">
+            <button class="btn-secondary" data-close="pickerSheet">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<div class="bottom-sheet" id="employeesSheet">
+    <div class="sheet-overlay" data-close="employeesSheet"></div>
+    <div class="sheet-panel">
+        <div class="sheet-handle"></div>
+        <h3 class="text-base font-bold text-fg mb-4">Список сотрудников</h3>
+        <div class="flex gap-2 mb-4">
+            <input type="text" class="input-field" id="newEmpInput" placeholder="Фамилия И.О." maxlength="40">
+            <button class="btn-primary" style="width:auto; padding:14px 18px; flex-shrink:0;" id="addEmpBtn">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+        <div id="employeesList"></div>
+        <div id="pwSection" style="display:none;">
+            <div class="divider"></div>
+            <p class="text-xs font-semibold text-muted mb-3 uppercase tracking-wider">Смена пароля</p>
+            <input type="password" class="input-field mb-2" id="newPwInput" placeholder="Новый пароль" maxlength="30">
+            <button class="btn-secondary" id="changePwBtn" style="font-size:13px; padding:12px;">
+                <i class="fas fa-key"></i> Сохранить пароль
+            </button>
+        </div>
+        <div class="mt-4">
+            <button class="btn-secondary" data-close="employeesSheet">Закрыть</button>
+        </div>
+    </div>
+</div>
+
+<div class="bottom-sheet" id="passwordSheet">
+    <div class="sheet-overlay" data-close="passwordSheet"></div>
+    <div class="sheet-panel">
+        <div class="sheet-handle"></div>
+        <h3 class="text-base font-bold text-fg mb-1">Ввод пароля</h3>
+        <p class="text-xs text-muted mb-4">Для доступа к редактированию графика</p>
+        <input type="password" class="input-field mb-3" id="pwInput" placeholder="Пароль" maxlength="30">
+        <button class="btn-primary mb-2" id="submitPwBtn">Войти</button>
+        <button class="btn-secondary mb-3" data-close="passwordSheet">Отмена</button>
+        <button class="text-xs text-muted underline bg-transparent border-none cursor-pointer block mx-auto" id="resetPwBtn" style="font-family:inherit;">
+            Сбросить на стандартный (1234)
+        </button>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+    const DEFAULT_PASSWORD = '1234';
+    const LS_EMPLOYEES = 'sched_emp';
+    const LS_SCHEDULE   = 'sched_data';
+    const LS_PASSWORD   = 'sched_pw';
+    const SS_EDIT       = 'sched_edit';
+
+    const MONTHS_FULL = [
+        'Январь','Февраль','Март','Апрель','Май','Июнь',
+        'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'
+    ];
+    const MONTHS_GEN = [
+        'января','февраля','марта','апреля','мая','июня',
+        'июля','августа','сентября','октября','ноября','декабря'
+    ];
+    const DAY_NAMES = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+
+    let employees  = [];
+    let schedule   = {};
+    let isEditMode = false;
+    let viewYear, viewMonth;
+    let activeSheet  = null;
+    let selectedSlot = null;
+
+    function fmtDate(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${dd}`;
+    }
+
+    function getDaysInMonth(year, month) {
+        return new Date(year, month + 1, 0).getDate();
+    }
+
+    function getWeekday(d) {
+        const day = d.getDay();
+        return day === 0 ? 6 : day - 1;
+    }
+
+    function loadData() {
+        try {
+            employees = JSON.parse(localStorage.getItem(LS_EMPLOYEES)) || [];
+            schedule  = JSON.parse(localStorage.getItem(LS_SCHEDULE)) || {};
+        } catch { employees = []; schedule = {}; }
+        isEditMode = sessionStorage.getItem(SS_EDIT) === '1';
+        const now = new Date();
+        viewYear = now.getFullYear();
+        viewMonth = now.getMonth();
+    }
+
+    function saveEmployees() { localStorage.setItem(LS_EMPLOYEES, JSON.stringify(employees)); }
+    function saveSchedule()  { localStorage.setItem(LS_SCHEDULE, JSON.stringify(schedule)); }
+    function getPassword()   { return localStorage.getItem(LS_PASSWORD) || DEFAULT_PASSWORD; }
+
+    function render() {
+        renderMonthNav();
+        renderSchedule();
+        renderFooter();
+    }
+
+    function renderMonthNav() {
+        document.getElementById('monthLabel').textContent = `${MONTHS_FULL[viewMonth]} ${viewYear}`;
+    }
+
+    function renderSchedule() {
+        const grid = document.getElementById('scheduleGrid');
+        const daysCount = getDaysInMonth(viewYear, viewMonth);
+        const todayStr = fmtDate(new Date());
+        let html = '';
+
+        for (let day = 1; day <= daysCount; day++) {
+            const d = new Date(viewYear, viewMonth, day);
+            const dk = fmtDate(d);
+            const isToday = dk === todayStr;
+            const todayDate = new Date(); todayDate.setHours(0,0,0,0);
+            d.setHours(0,0,0,0);
+            const isPast = d < todayDate;
+            const weekday = getWeekday(d);
+            const ds = schedule[dk] || { morning: ['', ''], evening: ['', ''] };
+
+            let cardCls = 'day-card';
+            if (isToday) cardCls += ' is-today';
+            else if (isPast) cardCls += ' is-past';
+
+            html += '<div class="' + cardCls + '">';
+            html += '<div class="day-header">';
+            html += '<div class="flex items-center">';
+            html += '<span class="day-name">' + DAY_NAMES[weekday] + '</span>';
+            html += '<span class="day-date-num">' + day + ' ' + MONTHS_GEN[viewMonth] + '</span>';
+            html += '</div>';
+            if (isToday) {
+                html += '<span class="today-badge"><span class="today-dot"></span>Сегодня</span>';
+            }
+            html += '</div>';
+
+            html += '<div class="shift-block">';
+            html += '<div class="shift-info">';
+            html += '<i class="fas fa-sun shift-icon morning"></i>';
+            html += '<span>8:00 \u2013 15:30</span>';
+            html += '</div>';
+            html += '<div class="slots-row">';
+            html += slotHTML(dk, 'morning', 0, ds.morning[0]);
+            html += slotHTML(dk, 'morning', 1, ds.morning[1]);
+            html += '</div></div>';
+
+            html += '<div class="shift-block">';
+            html += '<div class="shift-info">';
+            html += '<i class="fas fa-moon shift-icon evening"></i>';
+            html += '<span>15:30 \u2013 23:00</span>';
+            html += '</div>';
+            html += '<div class="slots-row">';
+            html += slotHTML(dk, 'evening', 0, ds.evening[0]);
+            html += slotHTML(dk, 'evening', 1, ds.evening[1]);
+            html += '</div></div>';
+
+            html += '</div>';
+        }
+
+        grid.innerHTML = html;
+    }
+
+    function slotHTML(dateKey, shift, idx, value) {
+        const cls = value ? 'filled' : 'empty';
+        if (isEditMode) {
+            return '<button class="slot edit ' + cls + '" onclick="openPicker(\'' + dateKey + '\',\'' + shift + '\',' + idx + ')">' +
+                   (value || '<i class="fas fa-plus"></i>') + '</button>';
+        }
+        return '<div class="slot view ' + cls + '">' + (value || '\u2014') + '</div>';
+    }
+
+    function renderFooter() {
+        const btn = document.getElementById('editBtn');
+        const label = document.getElementById('modeLabel');
+        if (isEditMode) {
+            btn.classList.add('is-active');
+            btn.innerHTML = '<i class="fas fa-lock-open"></i><span>Просмотр</span>';
+            label.textContent = 'Режим редактирования';
+            label.style.color = 'var(--accent)';
+        } else {
+            btn.classList.remove('is-active');
+            btn.innerHTML = '<i class="fas fa-lock"></i><span>Редактирование</span>';
+            label.textContent = 'Режим просмотра';
+            label.style.color = '';
+        }
+    }
+
+    function openPicker(dateKey, shift, index) {
+        selectedSlot = { dateKey: dateKey, shift: shift, index: index };
+        var curName = '';
+        if (schedule[dateKey] && schedule[dateKey][shift]) {
+            curName = schedule[dateKey][shift][index] || '';
+        }
+        var list = document.getElementById('pickerList');
+        var clearBtn = document.getElementById('clearSlotBtn');
+        clearBtn.style.display = curName ? 'block' : 'none';
+
+        if (employees.length === 0) {
+            list.innerHTML = '<div class="empty-state">Список пуст. Добавьте сотрудников через кнопку внизу.</div>';
+        } else {
+            var items = '';
+            for (var i = 0; i < employees.length; i++) {
+                var sel = employees[i] === curName ? ' is-selected' : '';
+                items += '<button class="picker-item' + sel + '" onclick="pickEmployee(' + i + ')">' + escHTML(employees[i]) + '</button>';
+            }
+            list.innerHTML = items;
+        }
+        showSheet('pickerSheet');
+    }
+
+    function pickEmployee(empIdx) {
+        if (!selectedSlot) return;
+        var dk = selectedSlot.dateKey;
+        var sh = selectedSlot.shift;
+        var idx = selectedSlot.index;
+        if (!schedule[dk]) schedule[dk] = { morning: ['', ''], evening: ['', ''] };
+        schedule[dk][sh][idx] = employees[empIdx];
+        saveSchedule();
+        hideSheet('pickerSheet');
+        renderSchedule();
+    }
+
+    function clearSlot() {
+        if (!selectedSlot) return;
+        var dk = selectedSlot.dateKey;
+        var sh = selectedSlot.shift;
+        var idx = selectedSlot.index;
+        if (schedule[dk] && schedule[dk][sh]) {
+            schedule[dk][sh][idx] = '';
+            saveSchedule();
+        }
+        hideSheet('pickerSheet');
+        renderSchedule();
+    }
+
+    function openEmployeesSheet() {
+        renderEmployeesList();
+        document.getElementById('newEmpInput').value = '';
+        document.getElementById('pwSection').style.display = isEditMode ? 'block' : 'none';
+        document.getElementById('newPwInput').value = '';
+        showSheet('employeesSheet');
+        setTimeout(function() { document.getElementById('newEmpInput').focus(); }, 350);
+    }
+
+    function renderEmployeesList() {
+        var list = document.getElementById('employeesList');
+        if (employees.length === 0) {
+            list.innerHTML = '<div class="empty-state">Сотрудников пока нет</div>';
+        } else {
+            var items = '';
+            for (var i = 0; i < employees.length; i++) {
+                items += '<div class="emp-item"><span>' + escHTML(employees[i]) + '</span>' +
+                         '<button class="emp-del" onclick="deleteEmployee(' + i + ')" aria-label="Удалить">' +
+                         '<i class="fas fa-trash-alt"></i></button></div>';
+            }
+            list.innerHTML = items;
+        }
+    }
+
+    function addEmployee() {
+        var input = document.getElementById('newEmpInput');
+        var name = input.value.trim();
+        if (!name) { showToast('Введите имя сотрудника', 'error'); return; }
+        if (name.length < 2) { showToast('Слишком короткое имя', 'error'); return; }
+        for (var i = 0; i < employees.length; i++) {
+            if (employees[i].toLowerCase() === name.toLowerCase()) {
+                showToast('Такой сотрудник уже есть', 'error'); return;
+            }
+        }
+        employees.push(name);
+        saveEmployees();
+        input.value = '';
+        renderEmployeesList();
+        showToast('Сотрудник добавлен', 'success');
+        input.focus();
+    }
+
+    function deleteEmployee(idx) {
+        var name = employees[idx];
+        employees.splice(idx, 1);
+        saveEmployees();
+        var keys = Object.keys(schedule);
+        for (var k = 0; k < keys.length; k++) {
+            var dk = keys[k];
+            if (!schedule[dk]) continue;
+            var shifts = ['morning', 'evening'];
+            for (var s = 0; s < shifts.length; s++) {
+                if (!schedule[dk][shifts[s]]) continue;
+                for (var i = 0; i < 2; i++) {
+                    if (schedule[dk][shifts[s]][i] === name) schedule[dk][shifts[s]][i] = '';
+                }
+            }
+        }
+        saveSchedule();
+        renderEmployeesList();
+        renderSchedule();
+        showToast(name + ' удалён', 'success');
+    }
+
+    function toggleEditMode() {
+        if (isEditMode) {
+            isEditMode = false;
+            sessionStorage.removeItem(SS_EDIT);
+            render();
+            showToast('Режим просмотра', 'info');
+        } else {
+            document.getElementById('pwInput').value = '';
+            showSheet('passwordSheet');
+            setTimeout(function() { document.getElementById('pwInput').focus(); }, 350);
+        }
+    }
+
+    function submitPassword() {
+        var input = document.getElementById('pwInput');
+        if (input.value === getPassword()) {
+            isEditMode = true;
+            sessionStorage.setItem(SS_EDIT, '1');
+            hideSheet('passwordSheet');
+            render();
+            showToast('Режим редактирования включён', 'success');
+        } else {
+            showToast('Неверный пароль', 'error');
+            input.classList.add('shake');
+            setTimeout(function() { input.classList.remove('shake'); }, 450);
+        }
+    }
+
+    function resetPassword() {
+        localStorage.removeItem(LS_PASSWORD);
+        showToast('Пароль сброшен на 1234', 'info');
+    }
+
+    function changePassword() {
+        var input = document.getElementById('newPwInput');
+        var pw = input.value.trim();
+        if (!pw || pw.length < 1) { showToast('Введите новый пароль', 'error'); return; }
+        localStorage.setItem(LS_PASSWORD, pw);
+        input.value = '';
+        showToast('Пароль изменён', 'success');
+    }
+
+    function switchMonth(dir) {
+        if (activeSheet) return;
+        var grid = document.getElementById('scheduleGrid');
+        grid.classList.add('switching');
+        setTimeout(function() {
+            viewMonth += dir;
+            if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+            if (viewMonth < 0)  { viewMonth = 11; viewYear--; }
+            renderMonthNav();
+            renderSchedule();
+            window.scrollTo({ top: 0, behavior: 'instant' });
+            grid.classList.remove('switching');
+        }, 180);
+    }
+
+    function goToday() {
+        if (activeSheet) return;
+        var now = new Date();
+        if (viewYear === now.getFullYear() && viewMonth === now.getMonth()) {
+            var el = document.querySelector('.day-card.is-today');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+        var grid = document.getElementById('scheduleGrid');
+        grid.classList.add('switching');
+        setTimeout(function() {
+            viewYear = now.getFullYear();
+            viewMonth = now.getMonth();
+            renderMonthNav();
+            renderSchedule();
+            grid.classList.remove('switching');
+            setTimeout(function() {
+                var el = document.querySelector('.day-card.is-today');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 200);
+        }, 180);
+    }
+
+    function updateScrollTopBtn() {
+        var btn = document.getElementById('scrollTopBtn');
+        if (window.scrollY > 400) {
+            btn.classList.add('visible');
+        } else {
+            btn.classList.remove('visible');
+        }
+    }
+
+    function showSheet(id) {
+        activeSheet = id;
+        document.getElementById(id).classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function hideSheet(id) {
+        activeSheet = null;
+        document.getElementById(id).classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    function showToast(msg, type) {
+        type = type || 'info';
+        var container = document.getElementById('toastContainer');
+        var el = document.createElement('div');
+        el.className = 'toast ' + type;
+        el.textContent = msg;
+        container.appendChild(el);
+        requestAnimationFrame(function() { el.classList.add('show'); });
+        setTimeout(function() {
+            el.classList.remove('show');
+            setTimeout(function() { el.remove(); }, 300);
+        }, 2200);
+    }
+
+    function escHTML(str) {
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    var touchStartX = 0, touchStartY = 0;
+    document.addEventListener('touchstart', function(e) {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    document.addEventListener('touchend', function(e) {
+        if (activeSheet) return;
+        var dx = touchStartX - e.changedTouches[0].screenX;
+        var dy = touchStartY - e.changedTouches[0].screenY;
+        if (Math.abs(dx) > 80 && Math.abs(dy) < 60) {
+            switchMonth(dx > 0 ? 1 : -1);
+        }
+    }, { passive: true });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadData();
+        render();
+
+        document.getElementById('prevMonth').addEventListener('click', function() { switchMonth(-1); });
+        document.getElementById('nextMonth').addEventListener('click', function() { switchMonth(1); });
+        document.getElementById('todayBtn').addEventListener('click', goToday);
+        document.getElementById('employeesBtn').addEventListener('click', openEmployeesSheet);
+        document.getElementById('editBtn').addEventListener('click', toggleEditMode);
+        document.getElementById('clearSlotBtn').addEventListener('click', clearSlot);
+        document.getElementById('addEmpBtn').addEventListener('click', addEmployee);
+        document.getElementById('newEmpInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addEmployee();
+        });
+        document.getElementById('submitPwBtn').addEventListener('click', submitPassword);
+        document.getElementById('pwInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') submitPassword();
+        });
+        document.getElementById('resetPwBtn').addEventListener('click', function() {
+            resetPassword();
+            hideSheet('passwordSheet');
+        });
+        document.getElementById('changePwBtn').addEventListener('click', changePassword);
+
+        var closeBtns = document.querySelectorAll('[data-close]');
+        for (var i = 0; i < closeBtns.length; i++) {
+            closeBtns[i].addEventListener('click', function() {
+                hideSheet(this.getAttribute('data-close'));
+            });
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && activeSheet) hideSheet(activeSheet);
+        });
+
+        document.getElementById('scrollTopBtn').addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        window.addEventListener('scroll', updateScrollTopBtn, { passive: true });
+    });
+</script>
+</body>
+</html>
