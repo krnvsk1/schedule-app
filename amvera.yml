@@ -1,0 +1,6 @@
+meta:
+  environment: node
+  runtimes:
+    - name: node
+      version: "18"
+      command: npm start

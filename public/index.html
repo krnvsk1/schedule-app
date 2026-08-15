@@ -8,8 +8,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script>
-        var NP_ID = '8cda880fbdf5acbaa69e';
-        var API_URL = 'https://api.npoint.io/' + NP_ID;
+        // Обращаемся к нашему серверу на Amvera
+        var API_URL = '/api/data';
         var DEFAULT_PASSWORD = '1234';
         var SS_EDIT = 'sched_edit';
         var MONTHS_FULL = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
@@ -140,7 +140,7 @@ function fmtDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2
 function getDaysInMonth(y,m){return new Date(y,m+1,0).getDate()}
 function getWeekday(d){var w=d.getDay();return w===0?6:w-1}
 function loadData(cb){fetch(API_URL).then(function(r){if(!r.ok)throw new Error();return r.json()}).then(function(data){employees=data.employees||[];schedule=data.schedule||{};if(data.password)sessionStorage.setItem('cached_pw',data.password);cb()}).catch(function(){showToast('Ошибка загрузки данных','error');cb()})}
-function saveData(cb){if(savingLock)return;savingLock=true;fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({employees:employees,schedule:schedule,password:getPassword()})}).then(function(r){if(!r.ok)throw new Error();savingLock=false;if(cb)cb()}).catch(function(){savingLock=false;showToast('Ошибка сохранения','error');if(cb)cb()})}
+function saveData(cb){if(savingLock)return;savingLock=true;fetch(API_URL,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({employees:employees,schedule:schedule,password:getPassword()})}).then(function(r){if(!r.ok)throw new Error();savingLock=false;if(cb)cb()}).catch(function(){savingLock=false;showToast('Ошибка сохранения','error');if(cb)cb()})}
 function getPassword(){return sessionStorage.getItem('cached_pw')||DEFAULT_PASSWORD}
 function onFirstLoad(){document.getElementById('loadingOverlay').classList.add('hide');setTimeout(function(){document.getElementById('loadingOverlay').style.display='none'},400);document.getElementById('app').style.opacity='1';isEditMode=sessionStorage.getItem(SS_EDIT)==='1';var now=new Date();viewYear=now.getFullYear();viewMonth=now.getMonth();render();setTimeout(function(){var el=document.querySelector('.day-row.is-today');if(el)el.scrollIntoView({behavior:'instant',block:'center'})},50)}
 function render(){renderMonthNav();renderSchedule();renderHeader();renderFooter()}
