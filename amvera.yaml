@@ -1,8 +1,19 @@
 meta:
-  toolchain: nodejs
+  environment: nodejs
+  toolchain:
+    name: npm
+    version: "20"
+build:
+  skip: false
+  additionalCommands: null
+  artifacts:
+    "*": /
+run:
+  scriptName: null
+  scriptArguments: null
+  nodeArguments: null
+  command: npm run start
+  persistenceMount: /data
+  containerPort: "80"
 ports:
   - 3000
-runtimes:
-  - name: node
-    version: "18"
-    command: npm start
