@@ -2,6 +2,10 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
+// Диагностика: выводим ВСЕ переменные Amvera
+console.log('PORT =', process.env.PORT);
+console.log('ALL ENV:', JSON.stringify(process.env, null, 2));
+
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = '/data/schedule.json';
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -15,7 +19,6 @@ const MIME = {
     '.ico': 'image/x-icon'
 };
 
-// Функция для чтения данных
 function getData() {
     try {
         if (fs.existsSync(DATA_FILE)) {
@@ -26,14 +29,11 @@ function getData() {
 }
 
 http.createServer((req, res) => {
-    // Отдать данные
     if (req.url === '/api/data' && req.method === 'GET') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(getData()));
         return;
     }
-
-    // Сохранить данные
     if (req.url === '/api/data' && req.method === 'PUT') {
         let body = '';
         req.on('data', c => body += c);
@@ -49,8 +49,6 @@ http.createServer((req, res) => {
         });
         return;
     }
-
-    // Отдать файлы сайта
     let fp = path.join(PUBLIC_DIR, req.url === '/' ? 'index.html' : req.url);
     fs.readFile(fp, (err, data) => {
         if (err) {
