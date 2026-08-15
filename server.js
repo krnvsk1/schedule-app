@@ -25,7 +25,7 @@ function getData() {
             return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
         }
     } catch (e) {}
-    return { employees: [], schedule: {}, password: '1234' };
+    return { employees: [], schedule: {}, password: '1903' };
 }
 
 http.createServer((req, res) => {
