@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const PORT = process.env.PORT || 3000;
-const NPOINT_URL = 'https://api.npoint.io/8cda880fbdf5acbaa69e';
+const DATA_FILE = '/data/schedule.json';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
 const MIME = {
@@ -15,30 +15,31 @@ const MIME = {
     '.ico': 'image/x-icon'
 };
 
-http.createServer(async (req, res) => {
-    if (req.url === '/api/data' && req.method === 'GET') {
-        try {
-            const r = await fetch(NPOINT_URL);
-            const d = await r.json();
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify(d));
-        } catch (e) {
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end('{"error":"load"}');
+// Функция для чтения данных
+function getData() {
+    try {
+        if (fs.existsSync(DATA_FILE)) {
+            return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
         }
+    } catch (e) {}
+    return { employees: [], schedule: {}, password: '1234' };
+}
+
+http.createServer((req, res) => {
+    // Отдать данные
+    if (req.url === '/api/data' && req.method === 'GET') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(getData()));
         return;
     }
 
+    // Сохранить данные
     if (req.url === '/api/data' && req.method === 'PUT') {
         let body = '';
         req.on('data', c => body += c);
-        req.on('end', async () => {
+        req.on('end', () => {
             try {
-                await fetch(NPOINT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: body
-                });
+                fs.writeFileSync(DATA_FILE, body);
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end('{"status":"ok"}');
             } catch (e) {
@@ -49,6 +50,7 @@ http.createServer(async (req, res) => {
         return;
     }
 
+    // Отдать файлы сайта
     let fp = path.join(PUBLIC_DIR, req.url === '/' ? 'index.html' : req.url);
     fs.readFile(fp, (err, data) => {
         if (err) {
