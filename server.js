@@ -6,7 +6,7 @@ const path = require('path');
 console.log('PORT =', process.env.PORT);
 console.log('ALL ENV:', JSON.stringify(process.env, null, 2));
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT0 || process.env.PORT || 3000;
 const DATA_FILE = '/data/schedule.json';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
