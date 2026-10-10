@@ -1,10 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-
-// Диагностика: выводим ВСЕ переменные Amvera
-console.log('PORT =', process.env.PORT);
-console.log('ALL ENV:', JSON.stringify(process.env, null, 2));
+const crypto = require('crypto');
 
 const PORT = process.env.PORT0 || process.env.PORT || 3000;
 const DATA_FILE = '/data/schedule.json';
@@ -28,18 +25,67 @@ function getData() {
     return { employees: [], schedule: {}, password: '1903' };
 }
 
+function sameSecret(a, b) {
+    var left = Buffer.from(String(a));
+    var right = Buffer.from(String(b));
+    if (left.length !== right.length) return false;
+    return crypto.timingSafeEqual(left, right);
+}
+
+function publicData(data) {
+    var copy = Object.assign({}, data);
+    delete copy.password;
+    return copy;
+}
+
+function readBody(req, cb) {
+    var body = '';
+    req.on('data', function (c) { body += c; });
+    req.on('end', function () { cb(body); });
+}
+
 http.createServer((req, res) => {
     if (req.url === '/api/data' && req.method === 'GET') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(getData()));
+        res.end(JSON.stringify(publicData(getData())));
+        return;
+    }
+    if (req.url === '/api/login' && req.method === 'POST') {
+        readBody(req, function (body) {
+            var parsed = {};
+            try { parsed = JSON.parse(body || '{}'); } catch (e) {}
+            var stored = getData();
+            if (sameSecret(parsed.password, stored.password)) {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end('{"ok":true}');
+            } else {
+                res.writeHead(401, { 'Content-Type': 'application/json' });
+                res.end('{"ok":false}');
+            }
+        });
         return;
     }
     if (req.url === '/api/data' && req.method === 'PUT') {
-        let body = '';
-        req.on('data', c => body += c);
-        req.on('end', () => {
+        readBody(req, function (body) {
             try {
-                fs.writeFileSync(DATA_FILE, body);
+                var parsed = JSON.parse(body || '{}');
+                var stored = getData();
+                if (!sameSecret(parsed.password, stored.password)) {
+                    res.writeHead(401, { 'Content-Type': 'application/json' });
+                    res.end('{"error":"password"}');
+                    return;
+                }
+                var nextPassword = stored.password;
+                if (typeof parsed.newPassword === 'string' && parsed.newPassword.trim()) nextPassword = parsed.newPassword.trim();
+                var next = {
+                    employees: Array.isArray(parsed.employees) ? parsed.employees : (stored.employees || []),
+                    schedule: parsed.schedule && typeof parsed.schedule === 'object' ? parsed.schedule : (stored.schedule || {}),
+                    budget: Array.isArray(parsed.budget) ? parsed.budget : (stored.budget || []),
+                    cashTypes: parsed.cashTypes && typeof parsed.cashTypes === 'object' ? parsed.cashTypes : (stored.cashTypes || { income: [], expense: [] }),
+                    cashlessTypes: parsed.cashlessTypes && typeof parsed.cashlessTypes === 'object' ? parsed.cashlessTypes : (stored.cashlessTypes || { income: [], expense: [] }),
+                    password: nextPassword
+                };
+                fs.writeFileSync(DATA_FILE, JSON.stringify(next));
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end('{"status":"ok"}');
             } catch (e) {
