@@ -4,7 +4,19 @@ const path = require('path');
 const crypto = require('crypto');
 
 const PORT = process.env.PORT0 || process.env.PORT || 3000;
-const DATA_FILE = '/data/schedule.json';
+function resolveDataFile() {
+    try {
+        if (fs.existsSync('/data') && fs.statSync('/data').isDirectory()) {
+            fs.accessSync('/data', fs.constants.W_OK);
+            return '/data/schedule.json';
+        }
+    } catch (e) {}
+    var localDir = path.join(__dirname, 'data');
+    try { fs.mkdirSync(localDir, { recursive: true }); } catch (e) {}
+    return path.join(localDir, 'schedule.json');
+}
+
+const DATA_FILE = resolveDataFile();
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
 const MIME = {
@@ -108,4 +120,4 @@ http.createServer((req, res) => {
         res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'text/plain' });
         res.end(data);
     });
-}).listen(PORT, () => console.log('Сервер запущен на порту ' + PORT));
+}).listen(PORT, () => console.log('Сервер запущен на порту ' + PORT + ', данные: ' + DATA_FILE));
