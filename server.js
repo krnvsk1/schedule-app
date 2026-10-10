@@ -4,7 +4,30 @@ const path = require('path');
 const crypto = require('crypto');
 
 const PORT = process.env.PORT0 || process.env.PORT || 3000;
+function loadJson(file) {
+    try {
+        if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch (e) {}
+    return null;
+}
+
+function hasScheduleData(data) {
+    if (!data || typeof data !== 'object') return false;
+    if (typeof data.password === 'string' && data.password) return true;
+    if (Array.isArray(data.employees) && data.employees.length) return true;
+    if (data.schedule && typeof data.schedule === 'object' && Object.keys(data.schedule).length) return true;
+    if (Array.isArray(data.budget) && data.budget.length) return true;
+    return false;
+}
+
 function resolveDataFile() {
+    var candidates = [];
+    if (process.env.DATA_FILE) candidates.push(process.env.DATA_FILE);
+    candidates.push(path.join(__dirname, 'data', 'schedule.json'));
+    candidates.push('/data/schedule.json');
+    for (var i = 0; i < candidates.length; i++) {
+        if (hasScheduleData(loadJson(candidates[i]))) return candidates[i];
+    }
     try {
         if (fs.existsSync('/data') && fs.statSync('/data').isDirectory()) {
             fs.accessSync('/data', fs.constants.W_OK);
@@ -29,12 +52,10 @@ const MIME = {
 };
 
 function getData() {
-    try {
-        if (fs.existsSync(DATA_FILE)) {
-            return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-        }
-    } catch (e) {}
-    return { employees: [], schedule: {}, password: '1903' };
+    var data = loadJson(DATA_FILE);
+    if (!data || typeof data !== 'object') data = { employees: [], schedule: {} };
+    if (typeof data.password !== 'string' || !data.password) data.password = '1903';
+    return data;
 }
 
 function sameSecret(a, b) {
@@ -67,7 +88,7 @@ http.createServer((req, res) => {
             var parsed = {};
             try { parsed = JSON.parse(body || '{}'); } catch (e) {}
             var stored = getData();
-            if (sameSecret(parsed.password, stored.password)) {
+            if (sameSecret(String(parsed.password || '').trim(), stored.password)) {
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end('{"ok":true}');
             } else {
@@ -82,7 +103,7 @@ http.createServer((req, res) => {
             try {
                 var parsed = JSON.parse(body || '{}');
                 var stored = getData();
-                if (!sameSecret(parsed.password, stored.password)) {
+                if (!sameSecret(String(parsed.password || '').trim(), stored.password)) {
                     res.writeHead(401, { 'Content-Type': 'application/json' });
                     res.end('{"error":"password"}');
                     return;
