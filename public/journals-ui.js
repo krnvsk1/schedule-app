@@ -303,12 +303,17 @@
         equipment.forEach(function (eq) { html += '<div class="j-line">' + escHTML(eq.name) + ' · ' + eq.limit_min_c + '…' + eq.limit_max_c + '</div>'; });
         html += '<label class="j-label">Зона склада</label><div class="temp-row"><input class="input-field" id="zoneName" placeholder="Название"><button type="button" class="chip-btn" id="zoneAdd">Добавить</button></div>';
         zones.forEach(function (z) { html += '<div class="j-line">' + escHTML(z.name) + '</div>'; });
-        html += '<label class="j-label">Сотрудники</label>';
+        html += '<label class="j-label">Сотрудник</label><input class="input-field mb-2" id="staffName" placeholder="Фамилия и имя" maxlength="80"><input class="input-field mb-2" id="staffPosition" placeholder="Должность" maxlength="80"><select class="input-field mb-2" id="staffRole"><option value="employee">Сотрудник</option><option value="cook">Повар</option><option value="storekeeper">Кладовщик</option><option value="supervisor">Ответственный</option></select><button type="button" class="btn-primary mb-3" id="staffAdd">Добавить сотрудника</button>';
         staff.forEach(function (p) {
-            html += '<div class="j-line">' + escHTML(p.name) + ' <button type="button" class="chip-btn role-btn" data-id="' + p.id + '">' + (p.role === 'supervisor' ? 'Ответственный' : 'Сотрудник') + '</button></div>';
+            html += '<div class="j-line"><div>' + escHTML(p.name) + (p.position ? ' · ' + escHTML(p.position) : '') + '</div><select class="input-field role-select" data-id="' + escHTML(p.id) + '">' + roleOptions(p.role) + '</select></div>';
         });
         html += '<button type="button" class="chip-btn" id="jOptional">Включить учёт дезраствора</button>';
         return html;
+    }
+
+    function roleOptions(current) {
+        var roles = [['employee', 'Сотрудник'], ['cook', 'Повар'], ['storekeeper', 'Кладовщик'], ['supervisor', 'Ответственный']];
+        return roles.map(function (r) { return '<option value="' + r[0] + '"' + (r[0] === current ? ' selected' : '') + '>' + r[1] + '</option>'; }).join('');
     }
 
     function renderDeviations() {
@@ -454,10 +459,21 @@
             zones.push({ id: 'zn_' + Date.now().toString(36), name: name, temp_min: 0, temp_max: 25, humidity_min: 40, humidity_max: 75 });
             persist(function () { go('admin'); });
         };
-        root.querySelectorAll('.role-btn').forEach(function (btn) {
-            btn.onclick = function () {
-                staff.forEach(function (p) { if (p.id === btn.getAttribute('data-id')) p.role = p.role === 'supervisor' ? 'employee' : 'supervisor'; });
-                persist(function () { go('admin'); });
+        var staffAdd = document.getElementById('staffAdd');
+        if (staffAdd) staffAdd.onclick = function () {
+            var name = val('staffName');
+            if (name.length < 2) { showToast('Введите имя сотрудника', 'error'); return; }
+            for (var i = 0; i < staff.length; i++) {
+                if (staff[i].name.toLowerCase() === name.toLowerCase()) { showToast('Такой сотрудник уже есть', 'error'); return; }
+            }
+            staff.push({ id: 'st_' + Date.now().toString(36), name: name, position: val('staffPosition'), role: val('staffRole') || 'employee' });
+            if (typeof employees !== 'undefined' && employees.indexOf(name) < 0) employees.push(name);
+            persist(function () { showToast('Сотрудник добавлен', 'success'); go('admin'); });
+        };
+        root.querySelectorAll('.role-select').forEach(function (sel) {
+            sel.onchange = function () {
+                staff.forEach(function (p) { if (p.id === sel.getAttribute('data-id')) p.role = sel.value; });
+                persist(function () { showToast('Права обновлены', 'success'); go('admin'); });
             };
         });
         var opt = document.getElementById('jOptional');
