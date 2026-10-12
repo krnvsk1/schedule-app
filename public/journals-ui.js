@@ -115,13 +115,16 @@
         var html = shell(tpl ? tpl.title : 'Журнал', '<p class="j-note">' + escHTML(tpl ? tpl.blurb : '') + '</p><button type="button" class="btn-primary mb-3" id="jAdd">Добавить запись</button>');
         if (!rows.length) html += '<div class="empty-state">Записей пока нет</div>';
         else {
-            html += '<div class="j-table-head"><span>Дата</span><span>Отметка 1</span><span>Отметка 2</span></div>';
+            html += '<table class="j-grid"><thead><tr><th>Дата</th><th>Отметка 1</th><th>Отметка 2</th><th></th></tr></thead><tbody>';
             feedGroups(rows).forEach(function (group) {
                 var day = feedDay(group[0]);
                 var when = day ? new Date(day + 'T12:00:00') : null;
                 var marks = twoMarks(group);
-                html += '<div class="j-table-row"><div class="j-rail"><div class="dr-name">' + (when ? when.getDate() : '') + '</div><div class="dr-date">' + (when ? MONTHS_GEN[when.getMonth()] : '') + '</div></div>' + markCell(marks[0]) + markCell(marks[1]) + '</div>';
+                var past = day < J.todayKey();
+                var editId = group[group.length - 1].id;
+                html += '<tr class="' + (past ? 'is-past' : '') + '"><td class="j-day">' + (when ? when.getDate() + ' ' + MONTHS_GEN[when.getMonth()] : '') + '</td><td>' + markInner(marks[0]) + '</td><td>' + markInner(marks[1]) + '</td><td>' + (past ? '<i class="fas fa-lock j-lock" title="Прошедшая дата"></i>' : '<button type="button" class="chip-btn j-edit" data-edit="' + escHTML(editId) + '">Изменить</button>') + '</td></tr>';
             });
+            html += '</tbody></table>';
         }
         if (activeCode === 'J2') html += '<div class="j-actions"><button type="button" class="chip-btn" id="jExport">Скачать CSV за месяц</button><button type="button" class="chip-btn" id="jPrint">Печать / PDF</button></div>';
         return html;
@@ -175,9 +178,27 @@
         return { time: e.created_at, text: entryTitle(e) };
     }
 
-    function markCell(mark) {
+    var editingEntry = null;
+
+    function isPastDay(day) { return !!day && day < J.todayKey(); }
+
+    function markInner(mark) {
         var empty = !mark || mark.text === '—';
-        return '<div class="j-mark' + (empty ? ' is-empty' : '') + '"><div class="j-mark-time">' + escHTML(clock(mark && mark.time)) + '</div><div class="j-mark-text">' + escHTML((mark && mark.text) || '—') + '</div></div>';
+        return '<div class="j-mark-time">' + escHTML(clock(mark && mark.time)) + '</div><div class="j-mark-text">' + escHTML(empty ? '—' : mark.text) + '</div>';
+    }
+
+    function reviseEntry(old, payload) {
+        journalEntries.push({
+            id: 'j_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+            journal: old.journal,
+            status: 'submitted',
+            version: (old.version || 1) + 1,
+            replaces_id: old.id,
+            edit_reason: 'Исправление за текущий день',
+            created_at: new Date().toISOString(),
+            author_name: authorName(),
+            payload: payload
+        });
     }
 
     function entryTitle(e) {
@@ -399,6 +420,7 @@
         var html = screen === 'feed' ? renderFeed() : screen === 'form' ? renderForm() : screen === 'admin' ? renderAdmin() : screen === 'deviations' ? renderDeviations() : renderToday();
         root.innerHTML = html;
         bind();
+        if (screen === 'form') prefillForm();
     }
 
     function val(id) { var el = document.getElementById(id); return el ? (el.type === 'checkbox' ? el.checked : el.value.trim()) : ''; }
@@ -407,13 +429,48 @@
         var entry = { journal: journal, status: 'submitted', payload: payload };
         var err = J.validateEntry(entry, snapshot());
         if (err) { showToast(err, 'error'); return; }
-        pushEntry(journal, payload, 'submitted');
+        if (editingEntry) {
+            if (isPastDay(feedDay(editingEntry))) { showToast('Прошлые даты закрыты для правки', 'error'); return; }
+            reviseEntry(editingEntry, payload);
+            editingEntry = null;
+        } else pushEntry(journal, payload, 'submitted');
         persist(function () { showToast('Сохранено', 'success'); go('feed', journal); });
+    }
+
+    function beginEdit(id) {
+        var entry = null;
+        journalEntries.forEach(function (e) { if (e.id === id) entry = e; });
+        if (!entry || isPastDay(feedDay(entry))) { showToast('Прошлые даты закрыты для правки', 'error'); return; }
+        editingEntry = entry;
+        go('form', entry.journal);
+    }
+
+    function prefillForm() {
+        if (!editingEntry || !editingEntry.payload) return;
+        var p = editingEntry.payload;
+        Object.keys(p).forEach(function (key) {
+            var el = document.getElementById(key);
+            if (!el) return;
+            if (el.type === 'checkbox') el.checked = !!p[key];
+            else if (p[key] !== null && typeof p[key] !== 'object') el.value = p[key];
+        });
+        if (editingEntry.journal === 'J2') {
+            latest('J2').forEach(function (e) {
+                if (feedDay(e) !== J.todayKey() || !e.payload) return;
+                var input = document.querySelector('.t-val[data-eq="' + e.payload.equipment_id + '"]');
+                var fix = document.querySelector('.t-fix[data-eq="' + e.payload.equipment_id + '"]');
+                if (input) input.value = e.payload.temperature_c;
+                if (fix && e.payload.corrective_action) { fix.value = e.payload.corrective_action; fix.style.display = 'block'; }
+            });
+        }
     }
 
     function bind() {
         var back = document.getElementById('jBack');
-        if (back) back.onclick = function () { go(screen === 'form' ? 'feed' : 'today', activeCode); };
+        if (back) back.onclick = function () { editingEntry = null; go(screen === 'form' ? 'feed' : 'today', activeCode); };
+        root.querySelectorAll('[data-edit]').forEach(function (btn) {
+            btn.onclick = function () { beginEdit(btn.getAttribute('data-edit')); };
+        });
         var root = document.getElementById('journalView');
         root.querySelectorAll('[data-open]').forEach(function (btn) {
             btn.onclick = function () { go('feed', btn.getAttribute('data-open')); };
@@ -578,10 +635,18 @@
             var payload = { equipment_id: eq.id, equipment_name: eq.name, equipment_type: eq.type, limit_min_c: eq.limit_min_c, limit_max_c: eq.limit_max_c, temperature_c: temp, within_limits: ok, corrective_action: fix ? fix.value.trim() : '' };
             var err = J.validateEntry({ journal: 'J2', status: 'submitted', payload: payload }, snapshot());
             if (err) { showToast(eq.name + ': ' + err, 'error'); return; }
-            pushEntry('J2', payload, 'submitted');
+            var existing = latest('J2').filter(function (e) { return feedDay(e) === J.todayKey() && e.payload && e.payload.equipment_id === eq.id; });
+            if (editingEntry && existing.length) {
+                if (isPastDay(feedDay(existing[0]))) { showToast('Прошлые даты закрыты для правки', 'error'); return; }
+                reviseEntry(existing[existing.length - 1], payload);
+            } else if (!editingEntry && existing.length >= 2) {
+                showToast(eq.name + ': за сегодня уже две отметки', 'error');
+                return;
+            } else pushEntry('J2', payload, 'submitted');
             made++;
         }
         if (!made) { showToast('Введите хотя бы одну температуру', 'error'); return; }
+        editingEntry = null;
         persist(function () { showToast('Сохранено', 'success'); go('feed', 'J2'); });
     }
 
