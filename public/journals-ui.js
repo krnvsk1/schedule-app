@@ -70,7 +70,7 @@
     }
 
     function shell(title, body) {
-        return '<div class="j-wrap"><div class="j-nav"><button type="button" class="chip-btn" id="jBack">Назад</button><strong>' + title + '</strong></div>' + body + '</div>';
+        return '<div class="j-wrap"><div class="j-nav"><button type="button" class="month-nav-btn" id="jBack" aria-label="Назад"><i class="fas fa-chevron-left"></i></button><h2 class="j-title">' + title + '</h2></div>' + body + '</div>';
     }
 
     function authorSelect() {
@@ -86,7 +86,7 @@
         var html = '<div class="j-wrap"><h2 class="j-title">Сегодня</h2><p class="j-note">Красное — ещё не заполнено. Жёлтое — рабочая запись ХАССП, это не журнал СанПиН.</p>';
         cards.forEach(function (c) {
             var tpl = J.template(c.code);
-            html += '<button type="button" class="j-card ' + c.level + '" data-open="' + c.code + '"><span class="j-kicker">' + J.layerLabel(tpl.layer) + '</span><span class="j-card-title">' + escHTML(c.title) + '</span><span class="j-card-detail">' + escHTML(c.detail) + '</span></button>';
+            html += '<button type="button" class="j-row ' + c.level + '" data-open="' + c.code + '"><div class="j-rail"><span class="j-dot"></span></div><div class="j-main"><div class="j-kicker">' + J.layerLabel(tpl.layer) + '</div><div class="j-card-title">' + escHTML(c.title) + '</div><div class="j-card-detail">' + escHTML(c.detail) + '</div></div><i class="fas fa-chevron-right j-chev"></i></button>';
         });
         html += '<div class="j-actions"><button type="button" class="chip-btn" id="jAdmin">Справочники</button><button type="button" class="chip-btn" id="jDev">Отклонения</button></div></div>';
         return html;
@@ -115,7 +115,10 @@
         var html = shell(tpl ? tpl.title : 'Журнал', '<p class="j-note">' + escHTML(tpl ? tpl.blurb : '') + '</p><button type="button" class="btn-primary mb-3" id="jAdd">Добавить запись</button>');
         if (!rows.length) html += '<div class="empty-state">Записей пока нет</div>';
         rows.forEach(function (e) {
-            html += '<div class="j-card"><span class="j-card-title">' + escHTML(entryTitle(e)) + '</span><span class="j-card-detail">' + escHTML(e.author_name || '') + ' · ' + escHTML(e.created_at.replace('T', ' ').slice(0, 16)) + '</span></div>';
+            var when = e.created_at ? new Date(e.created_at) : null;
+            var day = when ? when.getDate() : '';
+            var mon = when ? MONTHS_GEN[when.getMonth()] : '';
+            html += '<div class="j-row view"><div class="j-rail"><div class="dr-name">' + day + '</div><div class="dr-date">' + mon + '</div></div><div class="j-main"><div class="j-card-title">' + escHTML(entryTitle(e)) + '</div><div class="j-card-detail">' + escHTML(e.author_name || '') + '</div></div></div>';
         });
         if (activeCode === 'J2') html += '<button type="button" class="chip-btn" id="jExport">Скачать CSV за месяц</button> <button type="button" class="chip-btn" id="jPrint">Печать / PDF</button>';
         return html;
@@ -323,7 +326,7 @@
         });
         var html = shell('Отклонения', '');
         if (!rows.length) html += '<div class="empty-state">Отклонений нет</div>';
-        rows.forEach(function (e) { html += '<div class="j-card due"><span class="j-card-title">' + escHTML(entryTitle(e)) + '</span><span class="j-card-detail">' + escHTML((e.payload && e.payload.corrective_action) || '') + '</span></div>'; });
+        rows.forEach(function (e) { html += '<div class="j-row due view"><div class="j-rail"><span class="j-dot"></span></div><div class="j-main"><div class="j-card-title">' + escHTML(entryTitle(e)) + '</div><div class="j-card-detail">' + escHTML((e.payload && e.payload.corrective_action) || e.author_name || '') + '</div></div></div>'; });
         return html;
     }
 
