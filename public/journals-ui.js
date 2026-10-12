@@ -301,16 +301,23 @@
     }
 
     function renderAdmin() {
-        var html = shell('Справочники', '<p class="j-note">Оборудование, зоны, роли и критические точки.</p>');
-        html += '<label class="j-label">Холодильник</label><div class="temp-row"><input class="input-field" id="eqName" placeholder="Название"><select class="input-field" id="eqType"><option value="fridge">Холодильник</option><option value="freezer">Морозильник</option></select><button type="button" class="chip-btn" id="eqAdd">Добавить</button></div>';
-        equipment.forEach(function (eq) { html += '<div class="j-line">' + escHTML(eq.name) + ' · ' + eq.limit_min_c + '…' + eq.limit_max_c + '</div>'; });
-        html += '<label class="j-label">Зона склада</label><div class="temp-row"><input class="input-field" id="zoneName" placeholder="Название"><button type="button" class="chip-btn" id="zoneAdd">Добавить</button></div>';
-        zones.forEach(function (z) { html += '<div class="j-line">' + escHTML(z.name) + '</div>'; });
-        html += '<label class="j-label">Сотрудник</label><input class="input-field mb-2" id="staffName" placeholder="Фамилия и имя" maxlength="80"><input class="input-field mb-2" id="staffPosition" placeholder="Должность" maxlength="80"><select class="input-field mb-2" id="staffRole"><option value="employee">Сотрудник</option><option value="cook">Повар</option><option value="storekeeper">Кладовщик</option><option value="supervisor">Ответственный</option></select><button type="button" class="btn-primary mb-3" id="staffAdd">Добавить сотрудника</button>';
-        staff.forEach(function (p) {
-            html += '<div class="j-line"><div>' + escHTML(p.name) + (p.position ? ' · ' + escHTML(p.position) : '') + '</div><select class="input-field role-select" data-id="' + escHTML(p.id) + '">' + roleOptions(p.role) + '</select></div>';
+        var html = shell('Справочники', '<p class="j-note">Оборудование, складские зоны и роли сотрудников.</p>');
+        html += '<div class="j-label">Холодильники</div><div class="temp-card"><input class="input-field mb-2" id="eqName" placeholder="Название"><select class="input-field mb-2" id="eqType"><option value="fridge">Холодильник</option><option value="freezer">Морозильник</option></select><button type="button" class="btn-primary" id="eqAdd">Добавить</button></div>';
+        if (!equipment.length) html += '<div class="empty-state">Холодильников пока нет</div>';
+        equipment.forEach(function (eq) {
+            html += '<div class="j-row view"><div class="j-rail"><i class="fas fa-temperature-low"></i></div><div class="j-main"><div class="j-card-title">' + escHTML(eq.name) + '</div><div class="j-card-detail">' + (eq.type === 'freezer' ? 'Морозильник' : 'Холодильник') + ' · ' + eq.limit_min_c + '…' + eq.limit_max_c + ' °C</div></div></div>';
         });
-        html += '<button type="button" class="chip-btn" id="jOptional">Включить учёт дезраствора</button>';
+        html += '<div class="j-label">Зоны склада</div><div class="temp-card"><input class="input-field mb-2" id="zoneName" placeholder="Название зоны"><button type="button" class="btn-primary" id="zoneAdd">Добавить</button></div>';
+        if (!zones.length) html += '<div class="empty-state">Зон пока нет</div>';
+        zones.forEach(function (z) {
+            html += '<div class="j-row view"><div class="j-rail"><i class="fas fa-warehouse"></i></div><div class="j-main"><div class="j-card-title">' + escHTML(z.name) + '</div><div class="j-card-detail">' + z.temp_min + '…' + z.temp_max + ' °C</div></div></div>';
+        });
+        html += '<div class="j-label">Сотрудники</div><div class="temp-card"><input class="input-field mb-2" id="staffName" placeholder="Фамилия и имя" maxlength="80"><input class="input-field mb-2" id="staffPosition" placeholder="Должность" maxlength="80"><select class="input-field mb-2" id="staffRole"><option value="employee">Сотрудник</option><option value="cook">Повар</option><option value="storekeeper">Кладовщик</option><option value="supervisor">Ответственный</option></select><button type="button" class="btn-primary" id="staffAdd">Добавить сотрудника</button></div>';
+        if (!staff.length) html += '<div class="empty-state">Сотрудников пока нет</div>';
+        staff.forEach(function (p) {
+            html += '<div class="j-row view"><div class="j-rail"><i class="fas fa-user"></i></div><div class="j-main"><div class="j-card-title">' + escHTML(p.name) + '</div><div class="j-card-detail">' + escHTML(p.position || 'Без должности') + '</div></div><select class="input-field role-select" data-id="' + escHTML(p.id) + '">' + roleOptions(p.role) + '</select></div>';
+        });
+        html += '<button type="button" class="j-row warn" id="jOptional"><div class="j-rail"><span class="j-dot"></span></div><div class="j-main"><div class="j-card-title">Учёт дезраствора</div><div class="j-card-detail">Дополнительная запись ХАССП</div></div><i class="fas fa-chevron-right j-chev"></i></button>';
         return html;
     }
 
