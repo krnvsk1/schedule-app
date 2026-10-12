@@ -111,17 +111,73 @@
 
     function renderFeed() {
         var tpl = J.template(activeCode);
-        var rows = latest(activeCode).slice(0, 30);
+        var rows = latest(activeCode);
         var html = shell(tpl ? tpl.title : 'Журнал', '<p class="j-note">' + escHTML(tpl ? tpl.blurb : '') + '</p><button type="button" class="btn-primary mb-3" id="jAdd">Добавить запись</button>');
         if (!rows.length) html += '<div class="empty-state">Записей пока нет</div>';
-        rows.forEach(function (e) {
-            var when = e.created_at ? new Date(e.created_at) : null;
-            var day = when ? when.getDate() : '';
-            var mon = when ? MONTHS_GEN[when.getMonth()] : '';
-            html += '<div class="j-row view"><div class="j-rail"><div class="dr-name">' + day + '</div><div class="dr-date">' + mon + '</div></div><div class="j-main"><div class="j-card-title">' + escHTML(entryTitle(e)) + '</div><div class="j-card-detail">' + escHTML(e.author_name || '') + '</div></div></div>';
-        });
-        if (activeCode === 'J2') html += '<button type="button" class="chip-btn" id="jExport">Скачать CSV за месяц</button> <button type="button" class="chip-btn" id="jPrint">Печать / PDF</button>';
+        else {
+            html += '<div class="j-table-head"><span>Дата</span><span>Отметка 1</span><span>Отметка 2</span></div>';
+            feedGroups(rows).forEach(function (group) {
+                var day = feedDay(group[0]);
+                var when = day ? new Date(day + 'T12:00:00') : null;
+                var marks = twoMarks(group);
+                html += '<div class="j-table-row"><div class="j-rail"><div class="dr-name">' + (when ? when.getDate() : '') + '</div><div class="dr-date">' + (when ? MONTHS_GEN[when.getMonth()] : '') + '</div></div>' + markCell(marks[0]) + markCell(marks[1]) + '</div>';
+            });
+        }
+        if (activeCode === 'J2') html += '<div class="j-actions"><button type="button" class="chip-btn" id="jExport">Скачать CSV за месяц</button><button type="button" class="chip-btn" id="jPrint">Печать / PDF</button></div>';
         return html;
+    }
+
+    function feedDay(e) {
+        var p = e.payload || {};
+        return p.date || J.dayKey(e.created_at);
+    }
+
+    function feedGroups(rows) {
+        var map = {};
+        var order = [];
+        rows.forEach(function (e) {
+            var p = e.payload || {};
+            var key = feedDay(e) + '|' + (p.equipment_id || p.employee_id || p.zone_id || p.ccp_id || p.product_name || p.dish_name || p.product || '');
+            if (!map[key]) { map[key] = []; order.push(key); }
+            map[key].push(e);
+        });
+        return order.map(function (key) {
+            return map[key].sort(function (a, b) { return a.created_at > b.created_at ? 1 : -1; });
+        });
+    }
+
+    function clock(iso) {
+        if (!iso) return '';
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) return '';
+        return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    }
+
+    function twoMarks(group) {
+        var e = group[0];
+        var p = e.payload || {};
+        if (e.journal === 'J1') {
+            return [
+                { time: p.employee_confirmed_at, text: (p.employee_name || 'Сотрудник') + ' · отметился' },
+                { time: p.supervisor_confirmed_at, text: p.inspection_result === 'admitted' ? 'Допущен' : 'Отстранён' }
+            ];
+        }
+        if (e.journal === 'J4') {
+            return [
+                { time: p.started_at || e.created_at, text: (p.fat_type || 'Жир') + ' · ' + (p.organoleptic_start === 'replace_needed' ? 'замена' : 'норма') },
+                { time: p.ended_at, text: p.ended_at ? (p.organoleptic_end === 'replace_needed' ? 'замена' : 'норма') : '—' }
+            ];
+        }
+        return [markOf(group[0]), group[1] ? markOf(group[1]) : { time: '', text: '—' }];
+    }
+
+    function markOf(e) {
+        return { time: e.created_at, text: entryTitle(e) };
+    }
+
+    function markCell(mark) {
+        var empty = !mark || mark.text === '—';
+        return '<div class="j-mark' + (empty ? ' is-empty' : '') + '"><div class="j-mark-time">' + escHTML(clock(mark && mark.time)) + '</div><div class="j-mark-text">' + escHTML((mark && mark.text) || '—') + '</div></div>';
     }
 
     function entryTitle(e) {
