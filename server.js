@@ -39,7 +39,17 @@ http.createServer((req, res) => {
         req.on('data', c => body += c);
         req.on('end', () => {
             try {
-                fs.writeFileSync(DATA_FILE, body);
+                var next = JSON.parse(body);
+                var prev = getData();
+                if (!Object.prototype.hasOwnProperty.call(next, 'journalEntries')) next.journalEntries = prev.journalEntries || [];
+                var Journals = require('./public/journals-core.js');
+                var problem = Journals.validateSave(prev, next);
+                if (problem) {
+                    res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+                    res.end(JSON.stringify({ error: problem }));
+                    return;
+                }
+                fs.writeFileSync(DATA_FILE, JSON.stringify(next));
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end('{"status":"ok"}');
             } catch (e) {
